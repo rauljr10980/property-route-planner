@@ -8,8 +8,8 @@ export default defineConfig({
     port: 3000,
     open: true
   },
-  // GitHub Pages base path - change 'PR' to your repository name if different
-  base: process.env.GITHUB_ACTIONS ? '/PR/' : '/',
+  // GitHub Pages base path - matches repository name
+  base: process.env.GITHUB_ACTIONS ? '/property-route-planner/' : '/',
   build: {
     outDir: 'dist',
     sourcemap: false
