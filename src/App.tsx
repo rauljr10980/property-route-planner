@@ -27,11 +27,16 @@ export default function PropertyRoutePlanner() {
 
   useEffect(() => {
     const filtered = properties.filter(prop => {
-      // If no tax data, include the property (show all properties without tax data)
-      if (!prop.taxesOwed || !prop.appraisedValue || prop.taxesOwed === 0 || prop.appraisedValue === 0) {
+      // Use direct tax percentage if available, otherwise calculate
+      let percent = 0;
+      if (prop.taxPercentage !== undefined && prop.taxPercentage !== null) {
+        percent = prop.taxPercentage;
+      } else if (prop.taxesOwed && prop.appraisedValue && prop.appraisedValue > 0) {
+        percent = (prop.taxesOwed / prop.appraisedValue) * 100;
+      } else {
+        // If no tax data, include the property (show all properties without tax data)
         return true;
       }
-      const percent = (prop.taxesOwed / prop.appraisedValue) * 100;
       return percent <= filterPercent;
     });
     setFilteredProperties(filtered);
@@ -129,6 +134,7 @@ export default function PropertyRoutePlanner() {
       const addressCol = columnMapping.address;
       const taxesCol = columnMapping.taxes;
       const valueCol = columnMapping.value;
+      const taxPercentCol = columnMapping.taxPercent;
 
       if (!addressCol || !columnMapping.state || !columnMapping.zip) {
         throw new Error('Please select Street/City, State, and Zip Code columns');
@@ -164,6 +170,18 @@ export default function PropertyRoutePlanner() {
           const location = await geocodeWithGoogle(address);
           
           if (location) {
+            // Get tax percentage - prefer direct column, otherwise calculate
+            let taxPercentage = 0;
+            if (taxPercentCol && row[taxPercentCol]) {
+              taxPercentage = parseFloat(row[taxPercentCol] || 0);
+            } else if (taxesCol && valueCol && row[taxesCol] && row[valueCol]) {
+              const taxesOwed = parseFloat(row[taxesCol] || 0);
+              const appraisedValue = parseFloat(row[valueCol] || 0);
+              if (appraisedValue > 0) {
+                taxPercentage = (taxesOwed / appraisedValue) * 100;
+              }
+            }
+
             const prop = {
               id: i,
               address: address,
@@ -171,6 +189,7 @@ export default function PropertyRoutePlanner() {
               lng: location.lng,
               taxesOwed: taxesCol ? parseFloat(row[taxesCol] || 0) : 0,
               appraisedValue: valueCol ? parseFloat(row[valueCol] || 0) : 0,
+              taxPercentage: taxPercentage,
               owner: row[columnMapping.owner] || 'N/A',
               propertyType: row[columnMapping.propertyType] || 'N/A',
               ...row
@@ -233,7 +252,11 @@ export default function PropertyRoutePlanner() {
   };
 
   const calculateTaxPercent = (prop: any) => {
-    if (!prop.taxesOwed || !prop.appraisedValue) return 0;
+    // Use direct tax percentage if available, otherwise calculate
+    if (prop.taxPercentage !== undefined && prop.taxPercentage !== null) {
+      return parseFloat(prop.taxPercentage).toFixed(2);
+    }
+    if (!prop.taxesOwed || !prop.appraisedValue || prop.appraisedValue === 0) return 0;
     return ((prop.taxesOwed / prop.appraisedValue) * 100).toFixed(2);
   };
 
@@ -380,6 +403,23 @@ export default function PropertyRoutePlanner() {
                     <select
                       value={columnMapping.value || ''}
                       onChange={(e) => setColumnMapping({...columnMapping, value: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">Select column...</option>
+                      {previewData.columns.map((col: string) => (
+                        <option key={col} value={col}>{col}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tax Percentage Column (optional)
+                      <span className="text-xs text-gray-500 block mt-1">Direct percentage column (e.g., 5.2 for 5.2%)</span>
+                    </label>
+                    <select
+                      value={columnMapping.taxPercent || ''}
+                      onChange={(e) => setColumnMapping({...columnMapping, taxPercent: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
                     >
                       <option value="">Select column...</option>
