@@ -27,7 +27,10 @@ export default function PropertyRoutePlanner() {
 
   useEffect(() => {
     const filtered = properties.filter(prop => {
-      if (!prop.taxesOwed || !prop.appraisedValue) return false;
+      // If no tax data, include the property (show all properties without tax data)
+      if (!prop.taxesOwed || !prop.appraisedValue || prop.taxesOwed === 0 || prop.appraisedValue === 0) {
+        return true;
+      }
       const percent = (prop.taxesOwed / prop.appraisedValue) * 100;
       return percent <= filterPercent;
     });
