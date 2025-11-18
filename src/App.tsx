@@ -26,21 +26,9 @@ export default function PropertyRoutePlanner() {
   const [mapLoadError, setMapLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    const filtered = properties.filter(prop => {
-      // Use direct tax percentage if available, otherwise calculate
-      let percent = 0;
-      if (prop.taxPercentage !== undefined && prop.taxPercentage !== null) {
-        percent = prop.taxPercentage;
-      } else if (prop.taxesOwed && prop.appraisedValue && prop.appraisedValue > 0) {
-        percent = (prop.taxesOwed / prop.appraisedValue) * 100;
-      } else {
-        // If no tax data, include the property (show all properties without tax data)
-        return true;
-      }
-      return percent <= filterPercent;
-    });
-    setFilteredProperties(filtered);
-  }, [properties, filterPercent]);
+    // Show all properties - no filtering
+    setFilteredProperties(properties);
+  }, [properties]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -494,26 +482,7 @@ export default function PropertyRoutePlanner() {
 
             {properties.length > 0 && (
               <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Filter by Tax Percentage (≤ {filterPercent}%)
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={filterPercent}
-                      onChange={(e) => setFilterPercent(Number(e.target.value))}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>0%</span>
-                      <span>50%</span>
-                      <span>100%</span>
-                    </div>
-                  </div>
-                  
+                <div className="flex items-center justify-end gap-4">
                   <button
                     onClick={createRoute}
                     disabled={filteredProperties.length === 0}
@@ -526,8 +495,7 @@ export default function PropertyRoutePlanner() {
 
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <p className="text-sm text-gray-700">
-                    <strong>Total Properties:</strong> {properties.length} | 
-                    <strong className="ml-2">Filtered:</strong> {filteredProperties.length}
+                    <strong>Total Properties:</strong> {properties.length}
                   </p>
                 </div>
               </div>
