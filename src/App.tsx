@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { MapPin, TrendingUp, Menu } from 'lucide-react';
+import { MapPin, TrendingUp, Menu, Home } from 'lucide-react';
 import { LoadScript } from '@react-google-maps/api';
 import RoutePlanner from './components/RoutePlanner';
 import TaxTracker from './components/TaxTracker';
+import Dashboard from './components/Dashboard';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY';
 
-type Tab = 'route' | 'tracker';
+type Tab = 'dashboard' | 'route' | 'tracker';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('route');
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
 
   return (
     <LoadScript
@@ -29,6 +30,17 @@ export default function App() {
               
               {/* Tab Navigation */}
               <nav className="flex gap-2">
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    activeTab === 'dashboard'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <Home className="w-5 h-5" />
+                  <span className="font-medium">Dashboard</span>
+                </button>
                 <button
                   onClick={() => setActiveTab('route')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -58,6 +70,7 @@ export default function App() {
 
         {/* Tab Content */}
         <div className="w-full">
+          {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'route' && <RoutePlanner />}
           {activeTab === 'tracker' && <TaxTracker />}
         </div>
