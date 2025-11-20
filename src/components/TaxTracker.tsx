@@ -402,23 +402,106 @@ export default function TaxTracker() {
         </div>
       </nav>
 
-      {/* Home Page */}
+      {/* Home Page / Dashboard */}
       {currentPage === 'home' && (
         <div className="max-w-7xl mx-auto p-6">
           {properties.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <AlertCircle className="mx-auto mb-4 text-gray-400" size={48} />
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">No Data Yet</h3>
-              <p className="text-gray-600 mb-4">
-                Upload property data to see your dashboard with maps and analytics
-              </p>
-              <button
-                onClick={() => setCurrentPage('data')}
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              >
-                Go to Manage Data
-              </button>
-            </div>
+            <>
+              {/* Stats Overview - Empty State */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                  <div className="text-sm text-gray-600 mb-1">Total Properties</div>
+                  <div className="text-3xl font-bold text-gray-900">0</div>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
+                  <div className="text-sm text-gray-600 mb-1">High Priority (70+)</div>
+                  <div className="text-3xl font-bold text-red-600">0</div>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
+                  <div className="text-sm text-gray-600 mb-1">Total Balance Owed</div>
+                  <div className="text-2xl font-bold text-gray-900">$0</div>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
+                  <div className="text-sm text-gray-600 mb-1">Avg Motivation Score</div>
+                  <div className="text-3xl font-bold text-purple-600">0</div>
+                </div>
+              </div>
+
+              {/* Trend Filter and Graph - Empty State */}
+              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+                  <h2 className="text-2xl font-bold text-gray-900">Balance Trends Analysis</h2>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => setTrendFilter('all')}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
+                        trendFilter === 'all'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      <Filter size={16} />
+                      All Properties
+                    </button>
+                    <button
+                      onClick={() => setTrendFilter('increasing')}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg transition bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    >
+                      <TrendingUp size={16} />
+                      Increasing (0)
+                    </button>
+                    <button
+                      onClick={() => setTrendFilter('stable')}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg transition bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    >
+                      <Minus size={16} />
+                      Stable (0)
+                    </button>
+                    <button
+                      onClick={() => setTrendFilter('decreasing')}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg transition bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    >
+                      <TrendingDown size={16} />
+                      Decreasing (0)
+                    </button>
+                  </div>
+                </div>
+                <div className="text-center py-12 text-gray-500">
+                  Upload data to see balance trends
+                </div>
+              </div>
+
+              {/* Map Section - Empty State */}
+              <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Map className="text-green-600" size={24} />
+                    <h2 className="text-2xl font-bold text-gray-900">Property Map</h2>
+                  </div>
+                </div>
+                <div className="w-full h-96 bg-gray-100 rounded-lg border border-gray-300 flex items-center justify-center">
+                  <div className="text-center">
+                    <Map className="mx-auto mb-2 text-gray-400" size={48} />
+                    <p className="text-gray-600">Upload data to see properties on the map</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Empty State Message */}
+              <div className="bg-white rounded-lg shadow-md p-12 text-center">
+                <AlertCircle className="mx-auto mb-4 text-gray-400" size={48} />
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">No Data Yet</h3>
+                <p className="text-gray-600 mb-4">
+                  Upload property data to see your dashboard with maps and analytics
+                </p>
+                <button
+                  onClick={() => setCurrentPage('data')}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  Go to Manage Data
+                </button>
+              </div>
+            </>
           ) : (
             <>
               {/* Stats Overview */}
