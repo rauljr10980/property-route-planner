@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { MapPin, TrendingUp, Menu, Home } from 'lucide-react';
+import { MapPin, TrendingUp, Menu, Home, History } from 'lucide-react';
 import { LoadScript } from '@react-google-maps/api';
 import RoutePlanner from './components/RoutePlanner';
 import TaxTracker from './components/TaxTracker';
 import Dashboard from './components/Dashboard';
+import FileHistory from './components/FileHistory';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY';
 
-type Tab = 'dashboard' | 'route' | 'tracker';
+type Tab = 'dashboard' | 'route' | 'tracker' | 'history';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -63,6 +64,17 @@ export default function App() {
                   <TrendingUp className="w-5 h-5" />
                   <span className="font-medium">Status Tracker</span>
                 </button>
+                <button
+                  onClick={() => setActiveTab('history')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    activeTab === 'history'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <History className="w-5 h-5" />
+                  <span className="font-medium">File History</span>
+                </button>
               </nav>
             </div>
           </div>
@@ -73,6 +85,7 @@ export default function App() {
           {activeTab === 'dashboard' && <Dashboard />}
           {activeTab === 'route' && <RoutePlanner />}
           {activeTab === 'tracker' && <TaxTracker />}
+          {activeTab === 'history' && <FileHistory />}
         </div>
       </div>
     </LoadScript>

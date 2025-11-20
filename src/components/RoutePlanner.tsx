@@ -39,7 +39,62 @@ export default function RoutePlanner() {
 
   useEffect(() => {
     setFilteredProperties(properties);
+    
+    // Listen for file load events from FileHistory
+    const handleLoadFile = async (event: CustomEvent) => {
+      const { file } = event.detail;
+      if (file) {
+        // Create a fake event to trigger file upload
+        const fakeEvent = {
+          target: {
+            files: [file]
+          }
+        } as any;
+        await handleFileUpload(fakeEvent);
+      }
+    };
+    
+    window.addEventListener('loadFileFromHistory', handleLoadFile as EventListener);
+    return () => {
+      window.removeEventListener('loadFileFromHistory', handleLoadFile as EventListener);
+    };
   }, [properties]);
+
+  const addToFileHistory = async (file: File, jsonData: any[]) => {
+    try {
+      const fileSize = file.size;
+      const rowCount = jsonData.length;
+      const columns = Object.keys(jsonData[0] || {});
+      const sampleRows = jsonData.slice(0, 5);
+
+      // Convert file to base64 for storage
+      const fileData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+      });
+
+      const entry = {
+        id: new Date().toISOString(),
+        filename: file.name,
+        uploadDate: new Date().toISOString(),
+        fileSize,
+        rowCount,
+        columns,
+        sampleRows,
+        fileData
+      };
+
+      const savedHistory = localStorage.getItem('property-tax-file-history');
+      const existingHistory = savedHistory ? JSON.parse(savedHistory) : [];
+      const updatedHistory = [entry, ...existingHistory];
+      localStorage.setItem('property-tax-file-history', JSON.stringify(updatedHistory));
+    } catch (error) {
+      console.error('Error adding to file history:', error);
+      // Don't block the upload if history save fails
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -59,6 +114,9 @@ export default function RoutePlanner() {
       if (jsonData.length === 0) {
         throw new Error('Excel file is empty');
       }
+
+      // Add to file history
+      await addToFileHistory(file, jsonData);
 
       const columns = Object.keys(jsonData[0]);
       setRawData(jsonData);
