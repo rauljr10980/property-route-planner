@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, AlertCircle, TrendingUp, Download, Search, ExternalLink, Calendar, DollarSign, Users, FileText, RefreshCw, Loader, Home, Database, Map, Filter, TrendingDown, Minus, X } from 'lucide-react';
+import { AlertCircle, TrendingUp, Download, Search, ExternalLink, Calendar, DollarSign, Users, FileText, RefreshCw, Loader, Home, Database, Map, Filter, TrendingDown, Minus, X, CheckCircle } from 'lucide-react';
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
+import { loadSharedProperties, loadSharedPropertiesSync, Property as SharedProperty } from '../utils/sharedData';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY';
 
@@ -57,31 +58,23 @@ export default function TaxTracker() {
   const [hoveredProperty, setHoveredProperty] = useState<Property | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [geocodedProperties, setGeocodedProperties] = useState<Property[]>([]);
+  const [statusChangeFilter, setStatusChangeFilter] = useState<Set<'J' | 'A' | 'P'>>(new Set(['J', 'A', 'P']));
+  const [showStatusChanges, setShowStatusChanges] = useState(true);
 
   useEffect(() => {
-    loadData();
-  }, []);
-  
-  useEffect(() => {
-    // Listen for file load events from FileHistory
-    const handleLoadFile = async (event: CustomEvent) => {
-      const { file } = event.detail;
-      if (file) {
-        // Create a fake event to trigger file upload
-        const fakeEvent = {
-          target: {
-            files: [file]
-          }
-        } as any;
-        await handleFileUpload(fakeEvent);
-      }
+    loadPropertiesFromShared();
+    
+    // Listen for property updates
+    const handlePropertiesUpdated = (event: CustomEvent) => {
+      loadPropertiesFromShared();
     };
     
-    window.addEventListener('loadFileFromHistory', handleLoadFile as EventListener);
+    window.addEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
     return () => {
-      window.removeEventListener('loadFileFromHistory', handleLoadFile as EventListener);
+      window.removeEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
     };
-  }, [uploads, properties]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (currentPage === 'home' && properties.length > 0) {
@@ -89,32 +82,26 @@ export default function TaxTracker() {
     }
   }, [currentPage, properties]);
 
-  const loadData = () => {
+  const loadPropertiesFromShared = async () => {
     try {
-      const savedUploads = localStorage.getItem('property-tax-uploads');
-      const savedProperties = localStorage.getItem('property-tax-properties');
+      setLoading(true);
+      // Load from GCS first (persistent), fallback to localStorage
+      const { properties: sharedProps, lastUploadDate } = await loadSharedProperties();
+      setProperties(sharedProps);
       
-      if (savedUploads) {
-        setUploads(JSON.parse(savedUploads));
-      }
-      if (savedProperties) {
-        const parsedProps = JSON.parse(savedProperties);
-        setProperties(parsedProps);
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-    }
-    setLoading(false);
-  };
-
-  const saveData = (newUploads: Upload[], newProperties?: Property[]) => {
-    try {
-      localStorage.setItem('property-tax-uploads', JSON.stringify(newUploads));
-      if (newProperties) {
-        localStorage.setItem('property-tax-properties', JSON.stringify(newProperties));
+      // Update uploads count based on shared data
+      if (sharedProps.length > 0) {
+        const uploadCount = Math.ceil(sharedProps.length / 100); // Estimate based on typical file sizes
+        setUploads([{
+          id: lastUploadDate || new Date().toISOString(),
+          date: lastUploadDate ? new Date(lastUploadDate).toLocaleDateString() : new Date().toLocaleDateString(),
+          count: sharedProps.length
+        }]);
       }
     } catch (error) {
-      console.error('Error saving data:', error);
+      console.error('Error loading shared properties:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -289,90 +276,46 @@ export default function TaxTracker() {
     }
   };
 
-  const addToFileHistory = async (file: File, jsonData: any[]) => {
-    try {
-      const fileSize = file.size;
-      const rowCount = jsonData.length;
-      const columns = Object.keys(jsonData[0] || {});
-      const sampleRows = jsonData.slice(0, 5);
-
-      // Convert file to base64 for storage
-      const fileData = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
+  const getStatusChanges = () => {
+    return properties
+      .filter(prop => {
+        // Include properties with status changes or new properties
+        const currentStatus = prop.currentStatus || getStatus(prop);
+        return (prop.previousStatus !== currentStatus) || 
+               (prop.previousStatus === null && currentStatus !== null);
+      })
+      .map(prop => {
+        const currentStatus = prop.currentStatus || getStatus(prop);
+        const oldStatus = prop.previousStatus === null ? 'Blank' : prop.previousStatus;
+        const newStatus = currentStatus === null ? 'Blank' : currentStatus;
+        const isNew = prop.previousStatus === null && currentStatus !== null;
+        
+        return {
+          property: prop,
+          oldStatus,
+          newStatus,
+          isNew,
+          transition: `${oldStatus} → ${newStatus}`,
+          daysSinceChange: prop.daysSinceStatusChange || 0
+        };
       });
-
-      const entry = {
-        id: new Date().toISOString(),
-        filename: file.name,
-        uploadDate: new Date().toISOString(),
-        fileSize,
-        rowCount,
-        columns,
-        sampleRows,
-        fileData
-      };
-
-      const savedHistory = localStorage.getItem('property-tax-file-history');
-      const existingHistory = savedHistory ? JSON.parse(savedHistory) : [];
-      const updatedHistory = [entry, ...existingHistory];
-      localStorage.setItem('property-tax-file-history', JSON.stringify(updatedHistory));
-    } catch (error) {
-      console.error('Error adding to file history:', error);
-      // Don't block the upload if history save fails
-    }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setLoading(true);
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json<Property>(worksheet);
-
-      if (jsonData.length === 0) {
-        alert('No data found in the Excel file');
-        return;
-      }
-
-      // Add to file history
-      await addToFileHistory(file, jsonData);
-
-      const uploadDate = new Date().toISOString();
-      const newUpload: Upload = {
-        id: uploadDate,
-        date: new Date(uploadDate).toLocaleDateString(),
-        count: jsonData.length
-      };
-
-      const updatedUploads = [...uploads, newUpload];
-      setUploads(updatedUploads);
-
-      const propertiesWithScores = jsonData.map(prop => ({
-        ...prop,
-        motivationScore: calculateMotivationScore(prop)
-      })).sort((a, b) => (b.motivationScore || 0) - (a.motivationScore || 0));
-
-      setProperties(propertiesWithScores);
-      saveData(updatedUploads, propertiesWithScores);
-      
-      alert(`Successfully loaded ${jsonData.length} properties!`);
-      setCurrentPage('home');
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Error processing file. Please ensure it\'s a valid Excel file.');
-    } finally {
-      setLoading(false);
-      e.target.value = '';
+  const getFilteredStatusChanges = () => {
+    let allChanges = getStatusChanges();
+    
+    // Filter by new status (J, A, P)
+    if (statusChangeFilter.size < 3) {
+      allChanges = allChanges.filter(c => {
+        if (!c.newStatus || c.newStatus === 'Blank') return false;
+        return statusChangeFilter.has(c.newStatus as 'J' | 'A' | 'P');
+      });
     }
+    
+    return allChanges;
   };
+
+  // Removed upload functionality - all files are uploaded in File History tab
 
   const exportProperties = () => {
     if (properties.length === 0) {
@@ -876,15 +819,9 @@ export default function TaxTracker() {
             
             <div className="flex gap-4 items-center flex-wrap mb-6">
               <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition">
-                <Upload size={20} />
-                Upload Excel File
-                <input
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleFileUpload}
-                  disabled={loading}
-                  className="hidden"
-                />
+                <FileText size={20} />
+                <span>Properties loaded from File History</span>
+                <span className="text-xs">Upload files in the File History tab</span>
               </label>
               {properties.length > 0 && (
                 <>
@@ -929,6 +866,175 @@ export default function TaxTracker() {
             </div>
           </div>
 
+          {/* Status Changes Panel */}
+          {properties.length > 0 && (
+            <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-6 mb-6">
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">
+                      Properties with New Status
+                      <span className="ml-2 text-sm font-normal text-gray-500">({getStatusChanges().length || properties.filter(p => getStatus(p)).length})</span>
+                    </h2>
+                    <p className="text-xs text-gray-600 mt-1">
+                      {getStatusChanges().length > 0 
+                        ? 'These properties have received a new J, A, or P status since the last upload'
+                        : 'Properties with J, A, or P status'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowStatusChanges(!showStatusChanges)}
+                  className="text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-100 text-sm font-medium transition-colors"
+                >
+                  {showStatusChanges ? 'Hide' : 'Show'}
+                </button>
+              </div>
+
+              {showStatusChanges && (
+                <div className="space-y-4">
+                  {/* Status Filter (P, A, J, All) */}
+                  <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300">
+                    <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider">Filter by New Status</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => {
+                          if (statusChangeFilter.size === 3) {
+                            setStatusChangeFilter(new Set());
+                          } else {
+                            setStatusChangeFilter(new Set(['J', 'A', 'P']));
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                          statusChangeFilter.size === 3
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                        }`}
+                      >
+                        All Properties with New Status ({getStatusChanges().length})
+                      </button>
+                      {(['J', 'A', 'P'] as const).map((status) => {
+                        const count = getStatusChanges().filter(c => c.newStatus === status).length;
+                        const isSelected = statusChangeFilter.has(status);
+                        return (
+                          <button
+                            key={status}
+                            onClick={() => {
+                              const newFilter = new Set(statusChangeFilter);
+                              if (isSelected) {
+                                newFilter.delete(status);
+                              } else {
+                                newFilter.add(status);
+                              }
+                              setStatusChangeFilter(newFilter);
+                            }}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                              isSelected
+                                ? status === 'J'
+                                  ? 'bg-red-600 text-white shadow-sm'
+                                  : status === 'A'
+                                  ? 'bg-yellow-600 text-white shadow-sm'
+                                  : 'bg-blue-600 text-white shadow-sm'
+                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                            }`}
+                          >
+                            {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({count})
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Status Changes Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full" style={{ tableLayout: 'fixed', maxWidth: '100%' }}>
+                      <thead className="bg-gray-100">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '15%' }}>Property ID</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>Previous Status</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>New Status</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '40%' }}>Additional Details</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Days</th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '11%' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {getFilteredStatusChanges().length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
+                              No properties match the selected filters. Try selecting different status filters.
+                            </td>
+                          </tr>
+                        ) : (
+                          getFilteredStatusChanges().map((change, idx) => {
+                          const prop = change.property;
+                          const propertyId = prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
+                          const requestSeq = prop['Request Seq.'] || prop['Request Seq'] || '';
+                          const empty1 = prop['__EMPTY'] || '';
+                          const empty2 = prop['__EMPTY_1'] || '';
+                          const county = prop['BEXAR COUNTY'] || prop['County'] || 'BEXAR COUNTY';
+                          const address = prop.address || prop.Address || '';
+                          
+                          return (
+                            <tr key={idx} className="hover:bg-gray-50">
+                              <td className="px-3 py-2 text-xs text-gray-900 font-mono">{propertyId}</td>
+                              <td className="px-3 py-2">
+                                {change.oldStatus === 'Blank' ? (
+                                  <span className="text-xs text-gray-400">None</span>
+                                ) : (
+                                  <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(change.oldStatus)}`}>
+                                    {getStatusLabel(change.oldStatus)}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2">
+                                {change.newStatus === 'Blank' ? (
+                                  <span className="text-xs text-gray-400">None</span>
+                                ) : (
+                                  <span className={`px-2 py-1 text-xs font-medium rounded ${
+                                    change.newStatus === 'J' ? 'bg-red-100 text-red-800' :
+                                    change.newStatus === 'A' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {change.newStatus === 'J' ? 'Judgment (J)' :
+                                     change.newStatus === 'A' ? 'Active (A)' :
+                                     'Pending Judgment (P)'}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2 text-xs text-gray-600">
+                                <div className="space-y-0.5">
+                                  {requestSeq && <div>Request Seq.: {requestSeq}</div>}
+                                  {empty1 && <div>__EMPTY: {empty1}</div>}
+                                  {empty2 && <div>__EMPTY_1: {empty2}</div>}
+                                  {county && <div>{county}</div>}
+                                  {address && <div>{address}</div>}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-xs text-gray-600">
+                                {change.daysSinceChange === 0 ? 'Today' : `${change.daysSinceChange} day${change.daysSinceChange !== 1 ? 's' : ''} ago`}
+                              </td>
+                              <td className="px-3 py-2">
+                                <button
+                                  onClick={() => setSelectedProperty(prop)}
+                                  className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                                >
+                                  View
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {properties.length > 0 ? (
             <div className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">All Properties</h2>
@@ -940,7 +1046,9 @@ export default function TaxTracker() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Account #</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Owner/Address</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Balance</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Previous Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Current Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Days Since Change</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Actions</th>
                     </tr>
                   </thead>
@@ -950,10 +1058,13 @@ export default function TaxTracker() {
                       const owner = prop.owner || prop.Owner || 'Unknown';
                       const address = prop.address || prop.Address || '';
                       const balance = prop.currentBalance || prop.totalOwed || prop['Total Owed'] || prop.Balance || 0;
-                      const status = getStatus(prop);
+                      const currentStatus = prop.currentStatus || getStatus(prop);
+                      const previousStatus = prop.previousStatus;
+                      const daysSinceChange = prop.daysSinceStatusChange ?? null;
                       const scoreData = getMotivationLabel(prop.motivationScore || 0);
+                      const hasStatusChange = previousStatus !== null && previousStatus !== currentStatus;
                       return (
-                        <tr key={idx} className="hover:bg-gray-50">
+                        <tr key={idx} className={`hover:bg-gray-50 ${hasStatusChange ? 'bg-yellow-50' : ''}`}>
                           <td className="px-4 py-3">
                             <div className={`px-3 py-1 text-sm font-bold rounded-lg border-2 inline-block ${scoreData.color}`}>
                               {prop.motivationScore || 0}
@@ -970,10 +1081,30 @@ export default function TaxTracker() {
                             ${parseFloat(String(balance)).toLocaleString()}
                           </td>
                           <td className="px-4 py-3">
-                            {status && (
-                              <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(status)}`}>
-                                {getStatusLabel(status)}
+                            {previousStatus ? (
+                              <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(previousStatus)}`}>
+                                {getStatusLabel(previousStatus)}
                               </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">None</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {currentStatus ? (
+                              <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(currentStatus)}`}>
+                                {getStatusLabel(currentStatus)}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">None</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {daysSinceChange !== null ? (
+                              <span className={`text-xs font-medium ${hasStatusChange ? 'text-orange-600' : 'text-gray-600'}`}>
+                                {daysSinceChange === 0 ? 'Today' : `${daysSinceChange} day${daysSinceChange !== 1 ? 's' : ''} ago`}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-400">—</span>
                             )}
                           </td>
                           <td className="px-4 py-3">
@@ -996,7 +1127,10 @@ export default function TaxTracker() {
               <AlertCircle className="mx-auto mb-4 text-gray-400" size={48} />
               <h3 className="text-xl font-semibold text-gray-700 mb-2">Ready to Start</h3>
               <p className="text-gray-600 mb-4">
-                Upload an Excel file with property data to get started
+                Upload an Excel file in the <strong>File History</strong> tab to get started
+              </p>
+              <p className="text-sm text-gray-500">
+                All tabs share the same data - upload once in File History, use everywhere
               </p>
             </div>
           )}

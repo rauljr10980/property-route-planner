@@ -27,3 +27,21 @@ dist-ssr
 .env
 .env.local
 
+# Google Cloud Storage credentials (SECRET - DO NOT COMMIT!)
+config/gcs-credentials.json
+
+# Large data files (should not be in git)
+*.zip
+*.gdb
+extracted_data/
+extracted_data_new/
+extracted_fresh/
+zip_contents/
+*.xlsx
+!node_modules/**/*.xlsx
+
+# Credentials files (SECRET - DO NOT COMMIT!)
+*CREDENTIALS*.txt
+*credentials*.txt
+GCS_CREDENTIALS_FOR_RENDER.txt
+

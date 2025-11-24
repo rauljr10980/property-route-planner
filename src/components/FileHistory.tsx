@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, AlertCircle, History, Trash2, Eye, X, Download, Search, Calendar, FileText } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { Upload, AlertCircle, History, Trash2, Eye, X, Download, Search, Calendar, FileText, CheckCircle, TrendingUp } from 'lucide-react';
+import { Property } from '../utils/fileProcessor';
+import { saveSharedProperties, loadSharedProperties, loadSharedPropertiesSync } from '../utils/sharedData';
+import gcsStorage from '../services/gcsStorage';
 
 interface FileHistoryEntry {
   id: string;
@@ -10,7 +12,9 @@ interface FileHistoryEntry {
   rowCount: number;
   columns: string[];
   sampleRows: any[];
-  fileData?: string; // Base64 encoded file data
+  fileData?: string; // Base64 encoded file data (for localStorage fallback)
+  storagePath?: string; // Google Cloud Storage path
+  publicUrl?: string; // Google Cloud Storage public URL
 }
 
 export default function FileHistory() {
@@ -18,13 +22,70 @@ export default function FileHistory() {
   const [selectedFile, setSelectedFile] = useState<FileHistoryEntry | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [sharedProperties, setSharedProperties] = useState<Property[]>([]);
+  const [lastUploadDate, setLastUploadDate] = useState<string | null>(null);
+  const [processingProgress, setProcessingProgress] = useState<{ progress: number; message: string } | null>(null);
 
   useEffect(() => {
-    loadFileHistory();
+    const initialize = async () => {
+      await loadFileHistory();
+      await loadSharedData();
+    };
+    initialize();
+    
+    // Listen for property updates
+    const handlePropertiesUpdated = (event: CustomEvent) => {
+      loadSharedData();
+    };
+    
+    window.addEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
+    return () => {
+      window.removeEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
+    };
   }, []);
 
-  const loadFileHistory = () => {
+  const loadSharedData = async () => {
     try {
+      // Load from GCS first (persistent), fallback to localStorage
+      const { properties, lastUploadDate } = await loadSharedProperties();
+      setSharedProperties(properties);
+      setLastUploadDate(lastUploadDate);
+    } catch (error) {
+      console.error('Error loading shared data:', error);
+      // Fallback to sync version
+      const { properties, lastUploadDate } = loadSharedPropertiesSync();
+      setSharedProperties(properties);
+      setLastUploadDate(lastUploadDate);
+    }
+  };
+
+  const loadFileHistory = async () => {
+    try {
+      // Try to load from Google Cloud Storage first
+      try {
+        const files = await gcsStorage.listFiles();
+        const history: FileHistoryEntry[] = files.map(file => {
+          const metadata = file.metadata || {};
+          return {
+            id: file.name,
+            filename: metadata.originalName || file.name,
+            uploadDate: metadata.uploadDate || file.timeCreated,
+            fileSize: file.size,
+            rowCount: parseInt(metadata.rowCount || '0'),
+            columns: metadata.columns ? JSON.parse(metadata.columns) : [],
+            sampleRows: metadata.sampleRows ? JSON.parse(metadata.sampleRows) : [],
+            storagePath: `files/${file.name}`,
+            publicUrl: file.url
+          };
+        });
+        setFileHistory(history);
+        setLoading(false);
+        return;
+      } catch (gcsError) {
+        console.log('GCS API not available, trying localStorage:', gcsError);
+      }
+
+      // Fallback to localStorage
       const savedHistory = localStorage.getItem('property-tax-file-history');
       if (savedHistory) {
         setFileHistory(JSON.parse(savedHistory));
@@ -40,12 +101,10 @@ export default function FileHistory() {
       localStorage.setItem('property-tax-file-history', JSON.stringify(history));
       setFileHistory(history);
     } catch (error) {
-      console.error('Error saving file history:', error);
-      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
-        alert('Storage quota exceeded. Please delete some files to free up space.');
-      } else {
-        alert('Failed to save file history. Storage might be full.');
-      }
+      console.warn('Could not save file history to localStorage (files are still saved in cloud):', error);
+      // Files are saved in GCS, so localStorage is just for metadata cache
+      // Continue without showing an error - the files are safe in the cloud
+      setFileHistory(history);
     }
   };
 
@@ -62,102 +121,202 @@ export default function FileHistory() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setLoading(true);
+    setProcessingProgress({ progress: 0, message: 'Starting...' });
+
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const uploadDate = new Date().toISOString();
+      
+      // Load existing properties (sync for immediate use)
+      const { properties: existingProperties } = loadSharedPropertiesSync();
 
-      if (jsonData.length === 0) {
-        alert('No data found in the Excel file');
-        return;
-      }
+      // Always use server-side processing for all files (faster and more accurate)
+      setProcessingProgress({ progress: 5, message: 'Uploading file to server for processing...' });
+      
+      const result = await gcsStorage.processFile(
+        file,
+        existingProperties,
+        uploadDate,
+        (progress, message) => {
+          setProcessingProgress({ progress, message });
+        }
+      );
 
-      const fileSize = file.size;
-      const rowCount = jsonData.length;
-      const columns = Object.keys(jsonData[0] || {});
-      const sampleRows = jsonData.slice(0, 5);
+      const mergedProperties = result.properties;
+      const newStatusChanges = result.newStatusChanges;
+      const rowCount = result.metadata.rowCount;
+      const columns = result.metadata.columns;
+      const sampleRows = result.metadata.sampleRows;
+      const storagePath = result.storage.storagePath;
+      const publicUrl = result.storage.publicUrl;
 
-      // Convert file to base64 for storage
+      setProcessingProgress({ progress: 95, message: 'Saving processed data...' });
+
+      // Save merged properties to shared storage (saves to both localStorage and GCS)
+      await saveSharedProperties(mergedProperties, uploadDate);
+
+      // Convert file to base64 for storage in history (fallback)
       const fileData = await fileToBase64(file);
 
       const entry: FileHistoryEntry = {
-        id: new Date().toISOString(),
+        id: uploadDate,
         filename: file.name,
-        uploadDate: new Date().toISOString(),
-        fileSize,
+        uploadDate,
+        fileSize: file.size,
         rowCount,
         columns,
         sampleRows,
-        fileData
+        fileData: await fileToBase64(file), // Keep for fallback
+        storagePath,
+        publicUrl
       };
 
       const updatedHistory = [entry, ...fileHistory];
       saveFileHistory(updatedHistory);
       
-      alert(`File "${file.name}" added to history!`);
-    } catch (error) {
+      setProcessingProgress(null);
+      
+      // Show status change summary
+      if (newStatusChanges.length > 0) {
+        const statusSummary = newStatusChanges.reduce((acc, change) => {
+          if (change.newStatus) {
+            acc[change.newStatus] = (acc[change.newStatus] || 0) + 1;
+          }
+          return acc;
+        }, {} as Record<string, number>);
+        
+        const summaryText = Object.entries(statusSummary)
+          .map(([status, count]) => `${count} properties with ${status} status`)
+          .join(', ');
+        
+        alert(`File "${file.name}" processed successfully!\n\n${mergedProperties.length} total properties\n${newStatusChanges.length} status changes detected:\n${summaryText}\n\nCheck the Status Tracker tab to see details.`);
+      } else {
+        alert(`File "${file.name}" processed successfully!\n\n${mergedProperties.length} total properties\nNo status changes detected.`);
+      }
+    } catch (error: any) {
       console.error('Error processing file:', error);
-      alert('Error processing file. Please ensure it\'s a valid Excel file.');
+      setProcessingProgress(null);
+      alert(`Error processing file: ${error.message || 'Please ensure it\'s a valid Excel file.'}`);
     } finally {
+      setLoading(false);
       e.target.value = '';
     }
   };
 
-  const downloadFile = (entry: FileHistoryEntry) => {
-    if (!entry.fileData) {
-      alert('File data not available for download');
-      return;
-    }
-
+  const downloadFile = async (entry: FileHistoryEntry) => {
     try {
+      let blob: Blob;
+      
+      if (entry.storagePath) {
+        // Download from Google Cloud Storage
+        blob = await gcsStorage.downloadFile(entry.storagePath);
+      } else if (entry.fileData) {
+        // Fallback to base64 from localStorage
+        const response = await fetch(entry.fileData);
+        blob = await response.blob();
+      } else {
+        alert('File data not available for download');
+        return;
+      }
+
       const link = document.createElement('a');
-      link.href = entry.fileData;
+      link.href = URL.createObjectURL(blob);
       link.download = entry.filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch (error) {
+      URL.revokeObjectURL(link.href);
+    } catch (error: any) {
       console.error('Error downloading file:', error);
-      alert('Failed to download file');
+      alert(`Failed to download file: ${error.message || 'Unknown error'}`);
     }
   };
 
-  const deleteFile = (id: string) => {
+  const deleteFile = async (id: string) => {
     if (!confirm('Are you sure you want to delete this file from history?')) {
       return;
     }
 
-    const updatedHistory = fileHistory.filter(entry => entry.id !== id);
-    saveFileHistory(updatedHistory);
-    alert('File deleted from history');
+    try {
+      const entry = fileHistory.find(e => e.id === id);
+      if (entry?.storagePath) {
+        // Delete from Google Cloud Storage
+        await gcsStorage.deleteFile(entry.storagePath);
+      }
+      
+      const updatedHistory = fileHistory.filter(entry => entry.id !== id);
+      setFileHistory(updatedHistory);
+      saveFileHistory(updatedHistory);
+      alert('File deleted from history');
+    } catch (error: any) {
+      console.error('Error deleting file:', error);
+      alert(`Failed to delete file: ${error.message || 'Unknown error'}`);
+    }
   };
 
   const loadFileFromHistory = async (entry: FileHistoryEntry) => {
-    if (!entry.fileData) {
-      alert('File data not available');
-      return;
-    }
-
+    setLoading(true);
+    setProcessingProgress({ progress: 0, message: 'Loading file...' });
     try {
-      // Convert base64 back to file
-      const response = await fetch(entry.fileData);
-      const blob = await response.blob();
-      const file = new File([blob], entry.filename, { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-      });
+      let file: File;
+      
+      setProcessingProgress({ progress: 20, message: 'Downloading file...' });
+      
+      if (entry.storagePath) {
+        // Download from Google Cloud Storage
+        const blob = await gcsStorage.downloadFile(entry.storagePath);
+        file = new File([blob], entry.filename, { 
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        });
+      } else if (entry.fileData) {
+        // Fallback to base64 from localStorage
+        const response = await fetch(entry.fileData);
+        const blob = await response.blob();
+        file = new File([blob], entry.filename, { 
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        });
+      } else {
+        alert('File data not available');
+        setLoading(false);
+        setProcessingProgress(null);
+        return;
+      }
 
-      // Trigger a custom event that other components can listen to
-      const event = new CustomEvent('loadFileFromHistory', { 
-        detail: { file, entry } 
-      });
-      window.dispatchEvent(event);
+      // Load existing properties (sync for immediate use)
+      const { properties: existingProperties } = loadSharedPropertiesSync();
 
-      alert(`File "${entry.filename}" loaded! The file will be processed in the appropriate tab.`);
-    } catch (error) {
+      // Process using server-side processing (same as new uploads)
+      setProcessingProgress({ progress: 30, message: 'Processing file on server...' });
+      
+      const result = await gcsStorage.processFile(
+        file,
+        existingProperties,
+        entry.uploadDate,
+        (progress, message) => {
+          setProcessingProgress({ progress, message });
+        }
+      );
+
+      const mergedProperties = result.properties;
+      const newStatusChanges = result.newStatusChanges;
+
+      // Save merged properties to shared storage (saves to both localStorage and GCS)
+      await saveSharedProperties(mergedProperties, entry.uploadDate);
+
+      setProcessingProgress(null);
+
+      // Show status change summary
+      if (newStatusChanges.length > 0) {
+        alert(`File "${entry.filename}" reloaded and processed!\n\n${mergedProperties.length} total properties\n${newStatusChanges.length} status changes detected.`);
+      } else {
+        alert(`File "${entry.filename}" reloaded and processed!\n\n${mergedProperties.length} total properties`);
+      }
+    } catch (error: any) {
       console.error('Error loading file:', error);
-      alert('Failed to load file');
+      setProcessingProgress(null);
+      alert(`Failed to load file: ${error.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -194,7 +353,10 @@ export default function FileHistory() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <History className="text-blue-600" size={32} />
-              <h2 className="text-2xl font-bold text-gray-900">File Upload History</h2>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">File Upload & Processing</h2>
+                <p className="text-sm text-gray-600 mt-1">Upload files here to merge and track status changes across all tabs</p>
+              </div>
             </div>
             <div className="flex gap-4 items-center">
               <div className="relative">
@@ -207,29 +369,59 @@ export default function FileHistory() {
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
                 />
               </div>
-              <label className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition">
+              <label className={`flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition font-semibold shadow-lg ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <Upload size={20} />
-                Upload New File
+                {loading ? 'Processing...' : 'Upload & Process File'}
                 <input
                   type="file"
                   accept=".xlsx,.xls"
                   onChange={handleFileUpload}
+                  disabled={loading}
                   className="hidden"
                 />
               </label>
             </div>
           </div>
 
+          {/* Processing Progress */}
+          {processingProgress && (
+            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold text-blue-900">{processingProgress.message}</span>
+                <span className="text-sm font-bold text-blue-700">{processingProgress.progress}%</span>
+              </div>
+              <div className="w-full bg-blue-200 rounded-full h-3">
+                <div 
+                  className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${processingProgress.progress}%` }}
+                />
+              </div>
+              {processingProgress.progress > 30 && processingProgress.progress < 100 && (
+                <p className="text-xs text-blue-600 mt-2">
+                  Processing on server for fast and accurate results...
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
               <div className="text-blue-600 font-semibold text-sm">Total Files</div>
               <div className="text-3xl font-bold text-blue-900">{fileHistory.length}</div>
             </div>
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-              <div className="text-green-600 font-semibold text-sm">Total Rows</div>
+              <div className="text-green-600 font-semibold text-sm">Total Properties</div>
               <div className="text-3xl font-bold text-green-900">
-                {fileHistory.reduce((sum, file) => sum + file.rowCount, 0).toLocaleString()}
+                {sharedProperties.length.toLocaleString()}
+              </div>
+            </div>
+            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <div className="text-orange-600 font-semibold text-sm">Last Upload</div>
+              <div className="text-sm font-bold text-orange-900">
+                {lastUploadDate 
+                  ? new Date(lastUploadDate).toLocaleDateString()
+                  : 'Never'}
               </div>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">

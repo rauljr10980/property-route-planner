@@ -1,0 +1,1227 @@
+{
+  "fileName": "TRAINED DTR_Summary.959740.csv.xlsx",
+  "sheetName": "DTR_Summary.959740",
+  "analysisDate": "2025-11-21T17:31:22.477Z",
+  "summary": {
+    "totalColumns": 59,
+    "relevantColumns": 53,
+    "mostlyBlankColumns": 7,
+    "blankColumns": 6,
+    "totalDataRows": 58614
+  },
+  "columns": [
+    {
+      "columnNumber": 1,
+      "header": "REQUEST_SEQ",
+      "description": "Internal request number for the report.",
+      "meaning": "Internal request number for the report.",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "959740",
+        "959740",
+        "959740"
+      ]
+    },
+    {
+      "columnNumber": 2,
+      "header": "RPT_ORDER_SEQ",
+      "description": "Determines report ordering inside the system.",
+      "meaning": "Determines report ordering inside the system.",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    {
+      "columnNumber": 3,
+      "header": "DTL_ORDER_SEQ",
+      "description": "Detail sequence; used for internal sorting",
+      "meaning": "Detail sequence; used for internal sorting",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    {
+      "columnNumber": 4,
+      "header": "ASOFDATE",
+      "description": "The date the data snapshot was created.",
+      "meaning": "The date the data snapshot was created.",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "45934.85261574074",
+        "45934.85261574074",
+        "45934.85261574074"
+      ]
+    },
+    {
+      "columnNumber": 5,
+      "header": "CAN",
+      "description": "County Account Number (Parcel ID). This is your primary unique ID. This is what you will put to search in the \"https://bexar.acttax.com/act_webdev/bexar/index.jsp\" so you can scrape the data of how much taxes they owe, when was their last payments, who the last payers is, total amount due",
+      "meaning": "County Account Number (Parcel ID). This is your primary unique ID. This is what you will put to search in the \"https://bexar.acttax.com/act_webdev/bexar/index.jsp\" so you can scrape the data of how much taxes they owe, when was their last payments, who the last payers is, total amount due",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "102760",
+        "108554",
+        "110646"
+      ]
+    },
+    {
+      "columnNumber": 6,
+      "header": "SPECIAL_STATUS",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "N",
+        "N",
+        "N"
+      ]
+    },
+    {
+      "columnNumber": 7,
+      "header": "ADDRFLAG",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 20.8,
+      "nonEmptyRows": 12185,
+      "emptyRows": 46429,
+      "sampleValues": [
+        "BA",
+        "BA",
+        "BA"
+      ]
+    },
+    {
+      "columnNumber": 8,
+      "header": "ADDRSTRING",
+      "description": "Owner Name, Mailing Address, City, State, Zip Code",
+      "meaning": "Owner Name, Mailing Address, City, State, Zip Code",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "GONZALES HUMBERTO C 25114 ORCHARD ACRES SAN ANTONIO, TX 78261-2398 US",
+        "PENA CHRISTIAN A & PENA DELGADO LAURA & 715 W POPLAR ST SAN ANTONIO, TX 78212",
+        "BUBEL PAUL 406 MISSION ST SAN ANTONIO, TX 78210"
+      ]
+    },
+    {
+      "columnNumber": 9,
+      "header": "ZIPCODE",
+      "description": "Mailing Zip Code",
+      "meaning": "Mailing Zip Code",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "782612398",
+        "78212",
+        "78210"
+      ]
+    },
+    {
+      "columnNumber": 10,
+      "header": "TAXDEFSTRT",
+      "description": "Date tax delinquency started.",
+      "meaning": "Date tax delinquency started.",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 11.9,
+      "nonEmptyRows": 6990,
+      "emptyRows": 51624,
+      "sampleValues": [
+        "41940",
+        "42034",
+        "42283"
+      ]
+    },
+    {
+      "columnNumber": 11,
+      "header": "TAXDEFEND",
+      "description": "Date tax delinquency ended or last updated.",
+      "meaning": "Date tax delinquency ended or last updated.",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 1.8,
+      "nonEmptyRows": 1060,
+      "emptyRows": 57554,
+      "sampleValues": [
+        "44196",
+        "45165",
+        "45657"
+      ]
+    },
+    {
+      "columnNumber": 12,
+      "header": "MILDEFSTRT",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": false,
+      "isBlank": true,
+      "fillPercentage": 0,
+      "nonEmptyRows": 0,
+      "emptyRows": 58614,
+      "sampleValues": []
+    },
+    {
+      "columnNumber": 13,
+      "header": "MILDEFEND",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": false,
+      "isBlank": true,
+      "fillPercentage": 0,
+      "nonEmptyRows": 0,
+      "emptyRows": 58614,
+      "sampleValues": []
+    },
+    {
+      "columnNumber": 14,
+      "header": "ROLL",
+      "description": "Which roll the account is currently in — Real, Personal, Mineral, Omitted, Supplemental, etc.",
+      "meaning": "Which roll the account is currently in — Real, Personal, Mineral, Omitted, Supplemental, etc.",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "R",
+        "R",
+        "R"
+      ]
+    },
+    {
+      "columnNumber": 15,
+      "header": "BILLSUPPR",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 0,
+      "nonEmptyRows": 24,
+      "emptyRows": 58590,
+      "sampleValues": [
+        "R",
+        "R",
+        "R"
+      ]
+    },
+    {
+      "columnNumber": 16,
+      "header": "T_SPLIT_PAYMENT_FLAG",
+      "description": "Indicates if the taxpayer is on the “split payment” plan",
+      "meaning": "Indicates if the taxpayer is on the “split payment” plan",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 5.4,
+      "nonEmptyRows": 3163,
+      "emptyRows": 55451,
+      "sampleValues": [
+        "Q",
+        "H",
+        "H"
+      ]
+    },
+    {
+      "columnNumber": 17,
+      "header": "PNUMBER",
+      "description": "Target Property number",
+      "meaning": "Target Property number",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 94.3,
+      "nonEmptyRows": 55256,
+      "emptyRows": 3358,
+      "sampleValues": [
+        "203",
+        "715",
+        "406"
+      ]
+    },
+    {
+      "columnNumber": 18,
+      "header": "PSTRNAME",
+      "description": "Target property street name",
+      "meaning": "Target property street name",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 98.6,
+      "nonEmptyRows": 57820,
+      "emptyRows": 794,
+      "sampleValues": [
+        "COLIMA ST",
+        "W POPLAR ST",
+        "MISSION ST"
+      ]
+    },
+    {
+      "columnNumber": 19,
+      "header": "LGLSTRING",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "NCB: 276 BLK: 4 LOT: 17 VISTA VERDE SOUTH UNIT-7",
+        "NCB 753 BLK LOT S 108.5 FT OF W 68.2 FT OF A18",
+        "NCB 945 BLK 2 LOT 29"
+      ]
+    },
+    {
+      "columnNumber": 20,
+      "header": "LEGACRES",
+      "description": "Legal acreage of the property.",
+      "meaning": "Legal acreage of the property.",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "0.1014",
+        "0.1702",
+        "0.1791"
+      ]
+    },
+    {
+      "columnNumber": 21,
+      "header": "HOCAT",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 52.6,
+      "nonEmptyRows": 30848,
+      "emptyRows": 27766,
+      "sampleValues": [
+        "A1",
+        "A1",
+        "A1"
+      ]
+    },
+    {
+      "columnNumber": 22,
+      "header": "AGCAT",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 0.3,
+      "nonEmptyRows": 185,
+      "emptyRows": 58429,
+      "sampleValues": [
+        "1D1",
+        "1D1",
+        "1D1"
+      ]
+    },
+    {
+      "columnNumber": 23,
+      "header": "NQCAT",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 48,
+      "nonEmptyRows": 28113,
+      "emptyRows": 30501,
+      "sampleValues": [
+        "C1",
+        "A1",
+        "A1"
+      ]
+    },
+    {
+      "columnNumber": 24,
+      "header": "OMIT_CODE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 0,
+      "nonEmptyRows": 8,
+      "emptyRows": 58606,
+      "sampleValues": [
+        "F",
+        "F",
+        "F"
+      ]
+    },
+    {
+      "columnNumber": 25,
+      "header": "PPSTATUS",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 12.4,
+      "nonEmptyRows": 7291,
+      "emptyRows": 51323,
+      "sampleValues": [
+        "D1",
+        "AC",
+        "AC"
+      ]
+    },
+    {
+      "columnNumber": 26,
+      "header": "PP_PAYMENT_TYPE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 12.4,
+      "nonEmptyRows": 7291,
+      "emptyRows": 51323,
+      "sampleValues": [
+        "M",
+        "P",
+        "P"
+      ]
+    },
+    {
+      "columnNumber": 27,
+      "header": "PAY_AGREE_NO",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 12.4,
+      "nonEmptyRows": 7291,
+      "emptyRows": 51323,
+      "sampleValues": [
+        "305480",
+        "278508",
+        "311944"
+      ]
+    },
+    {
+      "columnNumber": 28,
+      "header": "PP_BEGIN_DATE",
+      "description": "Payment Plan BEGIN DATE",
+      "meaning": "Payment Plan BEGIN DATE",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 12.4,
+      "nonEmptyRows": 7291,
+      "emptyRows": 51323,
+      "sampleValues": [
+        "45823",
+        "45245",
+        "45945"
+      ]
+    },
+    {
+      "columnNumber": 29,
+      "header": "PP_END_DATE",
+      "description": "Payment Plan END DATE",
+      "meaning": "Payment Plan END DATE",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 12.4,
+      "nonEmptyRows": 7291,
+      "emptyRows": 51323,
+      "sampleValues": [
+        "45976",
+        "45397",
+        "46096"
+      ]
+    },
+    {
+      "columnNumber": 30,
+      "header": "CAUSE_NO",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 16.7,
+      "nonEmptyRows": 9788,
+      "emptyRows": 48826,
+      "sampleValues": [
+        "2014TA103220",
+        "2023TA100316",
+        "2010TA100304"
+      ]
+    },
+    {
+      "columnNumber": 31,
+      "header": "LEGALSTATUS",
+      "description": "Legal case status:P — Pending\r\n\r\nTaxes are delinquent.\r\n\r\nA lawsuit has NOT started yet.\r\n\r\nOwner still has full control.\r\n\r\nThis is the earliest stage of trouble.\r\n\r\nBest stage for early outreach and door knocking.\r\nDetect New Pending Properties\r\n\r\nIf a property shows up with P that did NOT exist last month, mark as new lead.\r\nA — Active\r\n\r\nA tax lawsuit has been filed and is currently active.\r\n\r\nOwner is now in the legal process with the county.\r\n\r\nMotivation increases because court fees are adding up.\r\n\r\nYour software should flag P → A as an escalation.\r\n\r\nJ — Judgment\r\n\r\nThe court has issued a final judgment against the owner.\r\n\r\nProperty is eligible to be scheduled for a sheriff sale.\r\n\r\nHighest urgency.\r\n\r\nYour software should flag A → J as a critical change.",
+      "meaning": "Legal case status:P — Pending\r\n\r\nTaxes are delinquent.\r\n\r\nA lawsuit has NOT started yet.\r\n\r\nOwner still has full control.\r\n\r\nThis is the earliest stage of trouble.\r\n\r\nBest stage for early outreach and door knocking.\r\nDetect New Pending Properties\r\n\r\nIf a property shows up with P that did NOT exist last month, mark as new lead.\r\nA — Active\r\n\r\nA tax lawsuit has been filed and is currently active.\r\n\r\nOwner is now in the legal process with the county.\r\n\r\nMotivation increases because court fees are adding up.\r\n\r\nYour software should flag P → A as an escalation.\r\n\r\nJ — Judgment\r\n\r\nThe court has issued a final judgment against the owner.\r\n\r\nProperty is eligible to be scheduled for a sheriff sale.\r\n\r\nHighest urgency.\r\n\r\nYour software should flag A → J as a critical change.",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 16.7,
+      "nonEmptyRows": 9788,
+      "emptyRows": 48826,
+      "sampleValues": [
+        "P",
+        "A",
+        "J"
+      ]
+    },
+    {
+      "columnNumber": 32,
+      "header": "BANKRUPT_NO",
+      "description": "Bankruptcy case number",
+      "meaning": "Bankruptcy case number",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 0.3,
+      "nonEmptyRows": 179,
+      "emptyRows": 58435,
+      "sampleValues": [
+        "25-52053",
+        "18-11803",
+        "18-11803"
+      ]
+    },
+    {
+      "columnNumber": 33,
+      "header": "BANKRUPT_STATUS",
+      "description": "Bankruptcy Status",
+      "meaning": "Bankruptcy Status",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 0.3,
+      "nonEmptyRows": 179,
+      "emptyRows": 58435,
+      "sampleValues": [
+        "B",
+        "B",
+        "B"
+      ]
+    },
+    {
+      "columnNumber": 34,
+      "header": "MIN_YEAR",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "2011",
+        "2024",
+        "2024"
+      ]
+    },
+    {
+      "columnNumber": 35,
+      "header": "MAX_YEAR",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "2011",
+        "2024",
+        "2024"
+      ]
+    },
+    {
+      "columnNumber": 36,
+      "header": "YEAR",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    {
+      "columnNumber": 37,
+      "header": "OWNERNO",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    {
+      "columnNumber": 38,
+      "header": "TAXUNIT",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": false,
+      "isBlank": true,
+      "fillPercentage": 0,
+      "nonEmptyRows": 0,
+      "emptyRows": 58614,
+      "sampleValues": []
+    },
+    {
+      "columnNumber": 39,
+      "header": "RECEIPT",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": false,
+      "isBlank": true,
+      "fillPercentage": 0,
+      "nonEmptyRows": 0,
+      "emptyRows": 58614,
+      "sampleValues": []
+    },
+    {
+      "columnNumber": 40,
+      "header": "RECTYPE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "TL",
+        "TL",
+        "TL"
+      ]
+    },
+    {
+      "columnNumber": 41,
+      "header": "PANDI_FLAG",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 0,
+      "nonEmptyRows": 9,
+      "emptyRows": 58605,
+      "sampleValues": [
+        "S",
+        "4",
+        "F"
+      ]
+    },
+    {
+      "columnNumber": 42,
+      "header": "RCV_DUE_DATE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "42430",
+        "45689",
+        "45689"
+      ]
+    },
+    {
+      "columnNumber": 43,
+      "header": "DIST_PAIDDATE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": false,
+      "isBlank": true,
+      "fillPercentage": 0,
+      "nonEmptyRows": 0,
+      "emptyRows": 58614,
+      "sampleValues": []
+    },
+    {
+      "columnNumber": 44,
+      "header": "DATE_3307",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 84.5,
+      "nonEmptyRows": 49537,
+      "emptyRows": 9077,
+      "sampleValues": [
+        "45839",
+        "45108",
+        "45474"
+      ]
+    },
+    {
+      "columnNumber": 45,
+      "header": "DATE_3308",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 7.1,
+      "nonEmptyRows": 4174,
+      "emptyRows": 54440,
+      "sampleValues": [
+        "42492",
+        "45903",
+        "42583"
+      ]
+    },
+    {
+      "columnNumber": 46,
+      "header": "DATE_3348",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 7.6,
+      "nonEmptyRows": 4453,
+      "emptyRows": 54161,
+      "sampleValues": [
+        "44593",
+        "45323",
+        "43132"
+      ]
+    },
+    {
+      "columnNumber": 47,
+      "header": "DELAYED_OMIT_PROP_DATE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": false,
+      "isBlank": true,
+      "fillPercentage": 0,
+      "nonEmptyRows": 0,
+      "emptyRows": 58614,
+      "sampleValues": []
+    },
+    {
+      "columnNumber": 48,
+      "header": "LEVY_BALANCE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "17.03",
+        "856.03",
+        "857.54"
+      ]
+    },
+    {
+      "columnNumber": 49,
+      "header": "PENDUE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "1.02",
+        "102.73",
+        "102.91"
+      ]
+    },
+    {
+      "columnNumber": 50,
+      "header": "INTDUE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "19.76",
+        "77.04",
+        "77.17"
+      ]
+    },
+    {
+      "columnNumber": 51,
+      "header": "PANDI",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "20.78",
+        "179.77",
+        "180.08"
+      ]
+    },
+    {
+      "columnNumber": 52,
+      "header": "PANDI_ATTY",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "28.35",
+        "374.49",
+        "180.08"
+      ]
+    },
+    {
+      "columnNumber": 53,
+      "header": "ATTY_FEE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "7.57",
+        "194.72",
+        "0"
+      ]
+    },
+    {
+      "columnNumber": 54,
+      "header": "COURT_COST",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    {
+      "columnNumber": 55,
+      "header": "ABSTRACT_FEE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    {
+      "columnNumber": 56,
+      "header": "OTHER_FEE",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    {
+      "columnNumber": 57,
+      "header": "TOT_PERCAN",
+      "description": "Total Taxes Owed",
+      "meaning": "Total Taxes Owed",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "45.38",
+        "1230.52",
+        "1037.62"
+      ]
+    },
+    {
+      "columnNumber": 58,
+      "header": "ACCT_COUNTS_4_SUMS",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58614,
+      "emptyRows": 0,
+      "sampleValues": [
+        "2",
+        "7",
+        "7"
+      ]
+    },
+    {
+      "columnNumber": 59,
+      "header": "APRDISTACC",
+      "description": null,
+      "meaning": "No description provided in file",
+      "isRelevant": true,
+      "isBlank": false,
+      "fillPercentage": 100,
+      "nonEmptyRows": 58595,
+      "emptyRows": 19,
+      "sampleValues": [
+        "102760",
+        "108554",
+        "110646"
+      ]
+    }
+  ],
+  "relevantColumnsList": [
+    {
+      "header": "REQUEST_SEQ",
+      "description": "Internal request number for the report.",
+      "fillPercentage": 100
+    },
+    {
+      "header": "RPT_ORDER_SEQ",
+      "description": "Determines report ordering inside the system.",
+      "fillPercentage": 100
+    },
+    {
+      "header": "DTL_ORDER_SEQ",
+      "description": "Detail sequence; used for internal sorting",
+      "fillPercentage": 100
+    },
+    {
+      "header": "ASOFDATE",
+      "description": "The date the data snapshot was created.",
+      "fillPercentage": 100
+    },
+    {
+      "header": "CAN",
+      "description": "County Account Number (Parcel ID). This is your primary unique ID. This is what you will put to search in the \"https://bexar.acttax.com/act_webdev/bexar/index.jsp\" so you can scrape the data of how much taxes they owe, when was their last payments, who the last payers is, total amount due",
+      "fillPercentage": 100
+    },
+    {
+      "header": "SPECIAL_STATUS",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "ADDRFLAG",
+      "description": "No description provided",
+      "fillPercentage": 20.8
+    },
+    {
+      "header": "ADDRSTRING",
+      "description": "Owner Name, Mailing Address, City, State, Zip Code",
+      "fillPercentage": 100
+    },
+    {
+      "header": "ZIPCODE",
+      "description": "Mailing Zip Code",
+      "fillPercentage": 100
+    },
+    {
+      "header": "TAXDEFSTRT",
+      "description": "Date tax delinquency started.",
+      "fillPercentage": 11.9
+    },
+    {
+      "header": "TAXDEFEND",
+      "description": "Date tax delinquency ended or last updated.",
+      "fillPercentage": 1.8
+    },
+    {
+      "header": "ROLL",
+      "description": "Which roll the account is currently in — Real, Personal, Mineral, Omitted, Supplemental, etc.",
+      "fillPercentage": 100
+    },
+    {
+      "header": "BILLSUPPR",
+      "description": "No description provided",
+      "fillPercentage": 0
+    },
+    {
+      "header": "T_SPLIT_PAYMENT_FLAG",
+      "description": "Indicates if the taxpayer is on the “split payment” plan",
+      "fillPercentage": 5.4
+    },
+    {
+      "header": "PNUMBER",
+      "description": "Target Property number",
+      "fillPercentage": 94.3
+    },
+    {
+      "header": "PSTRNAME",
+      "description": "Target property street name",
+      "fillPercentage": 98.6
+    },
+    {
+      "header": "LGLSTRING",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "LEGACRES",
+      "description": "Legal acreage of the property.",
+      "fillPercentage": 100
+    },
+    {
+      "header": "HOCAT",
+      "description": "No description provided",
+      "fillPercentage": 52.6
+    },
+    {
+      "header": "AGCAT",
+      "description": "No description provided",
+      "fillPercentage": 0.3
+    },
+    {
+      "header": "NQCAT",
+      "description": "No description provided",
+      "fillPercentage": 48
+    },
+    {
+      "header": "OMIT_CODE",
+      "description": "No description provided",
+      "fillPercentage": 0
+    },
+    {
+      "header": "PPSTATUS",
+      "description": "No description provided",
+      "fillPercentage": 12.4
+    },
+    {
+      "header": "PP_PAYMENT_TYPE",
+      "description": "No description provided",
+      "fillPercentage": 12.4
+    },
+    {
+      "header": "PAY_AGREE_NO",
+      "description": "No description provided",
+      "fillPercentage": 12.4
+    },
+    {
+      "header": "PP_BEGIN_DATE",
+      "description": "Payment Plan BEGIN DATE",
+      "fillPercentage": 12.4
+    },
+    {
+      "header": "PP_END_DATE",
+      "description": "Payment Plan END DATE",
+      "fillPercentage": 12.4
+    },
+    {
+      "header": "CAUSE_NO",
+      "description": "No description provided",
+      "fillPercentage": 16.7
+    },
+    {
+      "header": "LEGALSTATUS",
+      "description": "Legal case status:P — Pending\r\n\r\nTaxes are delinquent.\r\n\r\nA lawsuit has NOT started yet.\r\n\r\nOwner still has full control.\r\n\r\nThis is the earliest stage of trouble.\r\n\r\nBest stage for early outreach and door knocking.\r\nDetect New Pending Properties\r\n\r\nIf a property shows up with P that did NOT exist last month, mark as new lead.\r\nA — Active\r\n\r\nA tax lawsuit has been filed and is currently active.\r\n\r\nOwner is now in the legal process with the county.\r\n\r\nMotivation increases because court fees are adding up.\r\n\r\nYour software should flag P → A as an escalation.\r\n\r\nJ — Judgment\r\n\r\nThe court has issued a final judgment against the owner.\r\n\r\nProperty is eligible to be scheduled for a sheriff sale.\r\n\r\nHighest urgency.\r\n\r\nYour software should flag A → J as a critical change.",
+      "fillPercentage": 16.7
+    },
+    {
+      "header": "BANKRUPT_NO",
+      "description": "Bankruptcy case number",
+      "fillPercentage": 0.3
+    },
+    {
+      "header": "BANKRUPT_STATUS",
+      "description": "Bankruptcy Status",
+      "fillPercentage": 0.3
+    },
+    {
+      "header": "MIN_YEAR",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "MAX_YEAR",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "YEAR",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "OWNERNO",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "RECTYPE",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "PANDI_FLAG",
+      "description": "No description provided",
+      "fillPercentage": 0
+    },
+    {
+      "header": "RCV_DUE_DATE",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "DATE_3307",
+      "description": "No description provided",
+      "fillPercentage": 84.5
+    },
+    {
+      "header": "DATE_3308",
+      "description": "No description provided",
+      "fillPercentage": 7.1
+    },
+    {
+      "header": "DATE_3348",
+      "description": "No description provided",
+      "fillPercentage": 7.6
+    },
+    {
+      "header": "LEVY_BALANCE",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "PENDUE",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "INTDUE",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "PANDI",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "PANDI_ATTY",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "ATTY_FEE",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "COURT_COST",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "ABSTRACT_FEE",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "OTHER_FEE",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "TOT_PERCAN",
+      "description": "Total Taxes Owed",
+      "fillPercentage": 100
+    },
+    {
+      "header": "ACCT_COUNTS_4_SUMS",
+      "description": "No description provided",
+      "fillPercentage": 100
+    },
+    {
+      "header": "APRDISTACC",
+      "description": "No description provided",
+      "fillPercentage": 100
+    }
+  ],
+  "irrelevantColumnsList": [
+    {
+      "header": "MILDEFSTRT",
+      "description": "No description provided"
+    },
+    {
+      "header": "MILDEFEND",
+      "description": "No description provided"
+    },
+    {
+      "header": "TAXUNIT",
+      "description": "No description provided"
+    },
+    {
+      "header": "RECEIPT",
+      "description": "No description provided"
+    },
+    {
+      "header": "DIST_PAIDDATE",
+      "description": "No description provided"
+    },
+    {
+      "header": "DELAYED_OMIT_PROP_DATE",
+      "description": "No description provided"
+    }
+  ]
+}

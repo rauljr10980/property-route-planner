@@ -1,0 +1,884 @@
+{
+  "fileName": "TRAINED DTR_Summary.959740.csv.xlsx",
+  "sheetName": "DTR_Summary.959740",
+  "totalRows": 58617,
+  "columns": [
+    {
+      "column": 1,
+      "header": "Request Seq.:959740",
+      "description": "Internal request number for the report.",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 2,
+      "header": "Determines report ordering inside the system.",
+      "description": "RPT_ORDER_SEQ",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 3,
+      "header": "Detail sequence; used for internal sorting",
+      "description": "DTL_ORDER_SEQ",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 4,
+      "header": "BEXAR COUNTY",
+      "description": "The date the data snapshot was created.",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 5,
+      "header": "CAN",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 6,
+      "header": "SPECIAL_STATUS",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 7,
+      "header": "ADDRFLAG",
+      "description": "No description found",
+      "nonEmpty": 12185,
+      "empty": 46429,
+      "fillPercentage": "20.8",
+      "relevant": true
+    },
+    {
+      "column": 8,
+      "header": "ADDRSTRING",
+      "description": "GONZALES HUMBERTO C 25114 ORCHARD ACRES SAN ANTONIO, TX 78261-2398 US",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 9,
+      "header": "Mailing Zip Code",
+      "description": "ZIPCODE",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 10,
+      "header": "Date tax delinquency started.",
+      "description": "TAXDEFSTRT",
+      "nonEmpty": 6990,
+      "empty": 51624,
+      "fillPercentage": "11.9",
+      "relevant": true
+    },
+    {
+      "column": 11,
+      "header": "Date tax delinquency ended or last updated.",
+      "description": "TAXDEFEND",
+      "nonEmpty": 1060,
+      "empty": 57554,
+      "fillPercentage": "1.8",
+      "relevant": true
+    },
+    {
+      "column": 12,
+      "header": "MILDEFSTRT",
+      "description": "No description found",
+      "nonEmpty": 0,
+      "empty": 58614,
+      "fillPercentage": "0.0",
+      "relevant": false
+    },
+    {
+      "column": 13,
+      "header": "MILDEFEND",
+      "description": "No description found",
+      "nonEmpty": 0,
+      "empty": 58614,
+      "fillPercentage": "0.0",
+      "relevant": false
+    },
+    {
+      "column": 14,
+      "header": "ROLL",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 15,
+      "header": "BILLSUPPR",
+      "description": "No description found",
+      "nonEmpty": 24,
+      "empty": 58590,
+      "fillPercentage": "0.0",
+      "relevant": true
+    },
+    {
+      "column": 16,
+      "header": "T_SPLIT_PAYMENT_FLAG",
+      "description": "No description found",
+      "nonEmpty": 3163,
+      "empty": 55451,
+      "fillPercentage": "5.4",
+      "relevant": true
+    },
+    {
+      "column": 17,
+      "header": "Target Property number",
+      "description": "PNUMBER",
+      "nonEmpty": 55256,
+      "empty": 3358,
+      "fillPercentage": "94.3",
+      "relevant": true
+    },
+    {
+      "column": 18,
+      "header": "Target property street name",
+      "description": "PSTRNAME",
+      "nonEmpty": 57820,
+      "empty": 794,
+      "fillPercentage": "98.6",
+      "relevant": true
+    },
+    {
+      "column": 19,
+      "header": "LGLSTRING",
+      "description": "NCB: 276 BLK: 4 LOT: 17 VISTA VERDE SOUTH UNIT-7",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 20,
+      "header": "Legal acreage of the property.",
+      "description": "LEGACRES",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 21,
+      "header": "HOCAT",
+      "description": "No description found",
+      "nonEmpty": 30848,
+      "empty": 27766,
+      "fillPercentage": "52.6",
+      "relevant": true
+    },
+    {
+      "column": 22,
+      "header": "AGCAT",
+      "description": "No description found",
+      "nonEmpty": 185,
+      "empty": 58429,
+      "fillPercentage": "0.3",
+      "relevant": true
+    },
+    {
+      "column": 23,
+      "header": "NQCAT",
+      "description": "No description found",
+      "nonEmpty": 28113,
+      "empty": 30501,
+      "fillPercentage": "48.0",
+      "relevant": true
+    },
+    {
+      "column": 24,
+      "header": "OMIT_CODE",
+      "description": "No description found",
+      "nonEmpty": 8,
+      "empty": 58606,
+      "fillPercentage": "0.0",
+      "relevant": true
+    },
+    {
+      "column": 25,
+      "header": "PPSTATUS",
+      "description": "No description found",
+      "nonEmpty": 7291,
+      "empty": 51323,
+      "fillPercentage": "12.4",
+      "relevant": true
+    },
+    {
+      "column": 26,
+      "header": "PP_PAYMENT_TYPE",
+      "description": "No description found",
+      "nonEmpty": 7291,
+      "empty": 51323,
+      "fillPercentage": "12.4",
+      "relevant": true
+    },
+    {
+      "column": 27,
+      "header": "PAY_AGREE_NO",
+      "description": "No description found",
+      "nonEmpty": 7291,
+      "empty": 51323,
+      "fillPercentage": "12.4",
+      "relevant": true
+    },
+    {
+      "column": 28,
+      "header": "Payment Plan BEGIN DATE",
+      "description": "PP_BEGIN_DATE",
+      "nonEmpty": 7291,
+      "empty": 51323,
+      "fillPercentage": "12.4",
+      "relevant": true
+    },
+    {
+      "column": 29,
+      "header": "Payment Plan END DATE",
+      "description": "PP_END_DATE",
+      "nonEmpty": 7291,
+      "empty": 51323,
+      "fillPercentage": "12.4",
+      "relevant": true
+    },
+    {
+      "column": 30,
+      "header": "CAUSE_NO",
+      "description": "2014TA103220",
+      "nonEmpty": 9788,
+      "empty": 48826,
+      "fillPercentage": "16.7",
+      "relevant": true
+    },
+    {
+      "column": 31,
+      "header": "LEGALSTATUS",
+      "description": "No description found",
+      "nonEmpty": 9788,
+      "empty": 48826,
+      "fillPercentage": "16.7",
+      "relevant": true
+    },
+    {
+      "column": 32,
+      "header": "Bankruptcy case number",
+      "description": "BANKRUPT_NO",
+      "nonEmpty": 179,
+      "empty": 58435,
+      "fillPercentage": "0.3",
+      "relevant": true
+    },
+    {
+      "column": 33,
+      "header": "Bankruptcy Status",
+      "description": "BANKRUPT_STATUS",
+      "nonEmpty": 179,
+      "empty": 58435,
+      "fillPercentage": "0.3",
+      "relevant": true
+    },
+    {
+      "column": 34,
+      "header": "MIN_YEAR",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 35,
+      "header": "MAX_YEAR",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 36,
+      "header": "YEAR",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 37,
+      "header": "OWNERNO",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 38,
+      "header": "TAXUNIT",
+      "description": "No description found",
+      "nonEmpty": 0,
+      "empty": 58614,
+      "fillPercentage": "0.0",
+      "relevant": false
+    },
+    {
+      "column": 39,
+      "header": "RECEIPT",
+      "description": "No description found",
+      "nonEmpty": 0,
+      "empty": 58614,
+      "fillPercentage": "0.0",
+      "relevant": false
+    },
+    {
+      "column": 40,
+      "header": "RECTYPE",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 41,
+      "header": "PANDI_FLAG",
+      "description": "No description found",
+      "nonEmpty": 9,
+      "empty": 58605,
+      "fillPercentage": "0.0",
+      "relevant": true
+    },
+    {
+      "column": 42,
+      "header": "RCV_DUE_DATE",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 43,
+      "header": "DIST_PAIDDATE",
+      "description": "No description found",
+      "nonEmpty": 0,
+      "empty": 58614,
+      "fillPercentage": "0.0",
+      "relevant": false
+    },
+    {
+      "column": 44,
+      "header": "DATE_3307",
+      "description": "No description found",
+      "nonEmpty": 49537,
+      "empty": 9077,
+      "fillPercentage": "84.5",
+      "relevant": true
+    },
+    {
+      "column": 45,
+      "header": "DATE_3308",
+      "description": "No description found",
+      "nonEmpty": 4174,
+      "empty": 54440,
+      "fillPercentage": "7.1",
+      "relevant": true
+    },
+    {
+      "column": 46,
+      "header": "DATE_3348",
+      "description": "No description found",
+      "nonEmpty": 4453,
+      "empty": 54161,
+      "fillPercentage": "7.6",
+      "relevant": true
+    },
+    {
+      "column": 47,
+      "header": "DELAYED_OMIT_PROP_DATE",
+      "description": "No description found",
+      "nonEmpty": 0,
+      "empty": 58614,
+      "fillPercentage": "0.0",
+      "relevant": false
+    },
+    {
+      "column": 48,
+      "header": "LEVY_BALANCE",
+      "description": "17.03",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 49,
+      "header": "PENDUE",
+      "description": "1.02",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 50,
+      "header": "INTDUE",
+      "description": "19.76",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 51,
+      "header": "PANDI",
+      "description": "20.78",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 52,
+      "header": "PANDI_ATTY",
+      "description": "28.35",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 53,
+      "header": "ATTY_FEE",
+      "description": "7.57",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 54,
+      "header": "COURT_COST",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 55,
+      "header": "ABSTRACT_FEE",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 56,
+      "header": "OTHER_FEE",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 57,
+      "header": "Total Taxes Owed",
+      "description": "TOT_PERCAN",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 58,
+      "header": "ACCT_COUNTS_4_SUMS",
+      "description": "No description found",
+      "nonEmpty": 58614,
+      "empty": 0,
+      "fillPercentage": "100.0",
+      "relevant": true
+    },
+    {
+      "column": 59,
+      "header": "APRDISTACC",
+      "description": "No description found",
+      "nonEmpty": 58595,
+      "empty": 19,
+      "fillPercentage": "100.0",
+      "relevant": true
+    }
+  ],
+  "relevantColumns": [
+    {
+      "column": 1,
+      "header": "Request Seq.:959740",
+      "description": "Internal request number for the report.",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 2,
+      "header": "Determines report ordering inside the system.",
+      "description": "RPT_ORDER_SEQ",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 3,
+      "header": "Detail sequence; used for internal sorting",
+      "description": "DTL_ORDER_SEQ",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 4,
+      "header": "BEXAR COUNTY",
+      "description": "The date the data snapshot was created.",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 5,
+      "header": "CAN",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 6,
+      "header": "SPECIAL_STATUS",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 7,
+      "header": "ADDRFLAG",
+      "description": "No description found",
+      "fillPercentage": "20.8"
+    },
+    {
+      "column": 8,
+      "header": "ADDRSTRING",
+      "description": "GONZALES HUMBERTO C 25114 ORCHARD ACRES SAN ANTONIO, TX 78261-2398 US",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 9,
+      "header": "Mailing Zip Code",
+      "description": "ZIPCODE",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 10,
+      "header": "Date tax delinquency started.",
+      "description": "TAXDEFSTRT",
+      "fillPercentage": "11.9"
+    },
+    {
+      "column": 11,
+      "header": "Date tax delinquency ended or last updated.",
+      "description": "TAXDEFEND",
+      "fillPercentage": "1.8"
+    },
+    {
+      "column": 14,
+      "header": "ROLL",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 15,
+      "header": "BILLSUPPR",
+      "description": "No description found",
+      "fillPercentage": "0.0"
+    },
+    {
+      "column": 16,
+      "header": "T_SPLIT_PAYMENT_FLAG",
+      "description": "No description found",
+      "fillPercentage": "5.4"
+    },
+    {
+      "column": 17,
+      "header": "Target Property number",
+      "description": "PNUMBER",
+      "fillPercentage": "94.3"
+    },
+    {
+      "column": 18,
+      "header": "Target property street name",
+      "description": "PSTRNAME",
+      "fillPercentage": "98.6"
+    },
+    {
+      "column": 19,
+      "header": "LGLSTRING",
+      "description": "NCB: 276 BLK: 4 LOT: 17 VISTA VERDE SOUTH UNIT-7",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 20,
+      "header": "Legal acreage of the property.",
+      "description": "LEGACRES",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 21,
+      "header": "HOCAT",
+      "description": "No description found",
+      "fillPercentage": "52.6"
+    },
+    {
+      "column": 22,
+      "header": "AGCAT",
+      "description": "No description found",
+      "fillPercentage": "0.3"
+    },
+    {
+      "column": 23,
+      "header": "NQCAT",
+      "description": "No description found",
+      "fillPercentage": "48.0"
+    },
+    {
+      "column": 24,
+      "header": "OMIT_CODE",
+      "description": "No description found",
+      "fillPercentage": "0.0"
+    },
+    {
+      "column": 25,
+      "header": "PPSTATUS",
+      "description": "No description found",
+      "fillPercentage": "12.4"
+    },
+    {
+      "column": 26,
+      "header": "PP_PAYMENT_TYPE",
+      "description": "No description found",
+      "fillPercentage": "12.4"
+    },
+    {
+      "column": 27,
+      "header": "PAY_AGREE_NO",
+      "description": "No description found",
+      "fillPercentage": "12.4"
+    },
+    {
+      "column": 28,
+      "header": "Payment Plan BEGIN DATE",
+      "description": "PP_BEGIN_DATE",
+      "fillPercentage": "12.4"
+    },
+    {
+      "column": 29,
+      "header": "Payment Plan END DATE",
+      "description": "PP_END_DATE",
+      "fillPercentage": "12.4"
+    },
+    {
+      "column": 30,
+      "header": "CAUSE_NO",
+      "description": "2014TA103220",
+      "fillPercentage": "16.7"
+    },
+    {
+      "column": 31,
+      "header": "LEGALSTATUS",
+      "description": "No description found",
+      "fillPercentage": "16.7"
+    },
+    {
+      "column": 32,
+      "header": "Bankruptcy case number",
+      "description": "BANKRUPT_NO",
+      "fillPercentage": "0.3"
+    },
+    {
+      "column": 33,
+      "header": "Bankruptcy Status",
+      "description": "BANKRUPT_STATUS",
+      "fillPercentage": "0.3"
+    },
+    {
+      "column": 34,
+      "header": "MIN_YEAR",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 35,
+      "header": "MAX_YEAR",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 36,
+      "header": "YEAR",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 37,
+      "header": "OWNERNO",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 40,
+      "header": "RECTYPE",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 41,
+      "header": "PANDI_FLAG",
+      "description": "No description found",
+      "fillPercentage": "0.0"
+    },
+    {
+      "column": 42,
+      "header": "RCV_DUE_DATE",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 44,
+      "header": "DATE_3307",
+      "description": "No description found",
+      "fillPercentage": "84.5"
+    },
+    {
+      "column": 45,
+      "header": "DATE_3308",
+      "description": "No description found",
+      "fillPercentage": "7.1"
+    },
+    {
+      "column": 46,
+      "header": "DATE_3348",
+      "description": "No description found",
+      "fillPercentage": "7.6"
+    },
+    {
+      "column": 48,
+      "header": "LEVY_BALANCE",
+      "description": "17.03",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 49,
+      "header": "PENDUE",
+      "description": "1.02",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 50,
+      "header": "INTDUE",
+      "description": "19.76",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 51,
+      "header": "PANDI",
+      "description": "20.78",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 52,
+      "header": "PANDI_ATTY",
+      "description": "28.35",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 53,
+      "header": "ATTY_FEE",
+      "description": "7.57",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 54,
+      "header": "COURT_COST",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 55,
+      "header": "ABSTRACT_FEE",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 56,
+      "header": "OTHER_FEE",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 57,
+      "header": "Total Taxes Owed",
+      "description": "TOT_PERCAN",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 58,
+      "header": "ACCT_COUNTS_4_SUMS",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    },
+    {
+      "column": 59,
+      "header": "APRDISTACC",
+      "description": "No description found",
+      "fillPercentage": "100.0"
+    }
+  ],
+  "irrelevantColumns": [
+    {
+      "column": 12,
+      "header": "MILDEFSTRT"
+    },
+    {
+      "column": 13,
+      "header": "MILDEFEND"
+    },
+    {
+      "column": 38,
+      "header": "TAXUNIT"
+    },
+    {
+      "column": 39,
+      "header": "RECEIPT"
+    },
+    {
+      "column": 43,
+      "header": "DIST_PAIDDATE"
+    },
+    {
+      "column": 47,
+      "header": "DELAYED_OMIT_PROP_DATE"
+    }
+  ]
+}

@@ -1,0 +1,550 @@
+{
+  "file": "TRAINED DTR_Summary.959740.csv.xlsx",
+  "totalRows": 58614,
+  "analyzedRows": 1000,
+  "relevantColumns": [
+    {
+      "column": "ABSTRACT_FEE",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "0"
+      ]
+    },
+    {
+      "column": "ACCT_COUNTS_4_SUMS",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "2",
+        "7",
+        "14"
+      ]
+    },
+    {
+      "column": "ADDRFLAG",
+      "definition": "No definition found",
+      "fillRate": "33.9%",
+      "filledRows": 339,
+      "sampleValues": [
+        "BA"
+      ]
+    },
+    {
+      "column": "ADDRSTRING",
+      "definition": "Owner Name, Mailing Address, City, State, Zip Code",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "GONZALES HUMBERTO C 25114 ORCHARD ACRES SAN ANTONIO, TX 78261-2398 US",
+        "PENA CHRISTIAN A & PENA DELGADO LAURA & 715 W POPLAR ST SAN ANTONIO, TX 78212",
+        "BUBEL PAUL 406 MISSION ST SAN ANTONIO, TX 78210"
+      ]
+    },
+    {
+      "column": "AGCAT",
+      "definition": "No definition found",
+      "fillRate": "0.6%",
+      "filledRows": 6,
+      "sampleValues": [
+        "1D1"
+      ]
+    },
+    {
+      "column": "APRDISTACC",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "102760",
+        "108554",
+        "110646"
+      ]
+    },
+    {
+      "column": "ASOFDATE",
+      "definition": "The date the data snapshot was created.",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "10/4/25 20:27"
+      ]
+    },
+    {
+      "column": "ATTY_FEE",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "7.57",
+        "194.72",
+        "0"
+      ]
+    },
+    {
+      "column": "BANKRUPT_NO",
+      "definition": "Bankruptcy case number",
+      "fillRate": "1.2%",
+      "filledRows": 12,
+      "sampleValues": [
+        "25-52053",
+        "18-11803",
+        "19-51155"
+      ]
+    },
+    {
+      "column": "BANKRUPT_STATUS",
+      "definition": "Bankruptcy Status",
+      "fillRate": "1.2%",
+      "filledRows": 12,
+      "sampleValues": [
+        "B"
+      ]
+    },
+    {
+      "column": "CAN",
+      "definition": "County Account Number (Parcel ID). This is your primary unique ID. This is what you will put to search in the \"https://bexar.acttax.com/act_webdev/bexar/index.jsp\" so you can scrape the data of how much taxes they owe, when was their last payments, who the last payers is, total amount due",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "102760",
+        "108554",
+        "110646"
+      ]
+    },
+    {
+      "column": "CAUSE_NO",
+      "definition": "No definition found",
+      "fillRate": "17.0%",
+      "filledRows": 170,
+      "sampleValues": [
+        "2014TA103220",
+        "2023TA100316",
+        "2010TA100304"
+      ]
+    },
+    {
+      "column": "COURT_COST",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "0"
+      ]
+    },
+    {
+      "column": "DATE_3307",
+      "definition": "No definition found",
+      "fillRate": "89.0%",
+      "filledRows": 890,
+      "sampleValues": [
+        "7/1/25",
+        "7/1/23",
+        "7/1/24"
+      ]
+    },
+    {
+      "column": "DATE_3308",
+      "definition": "No definition found",
+      "fillRate": "7.6%",
+      "filledRows": 76,
+      "sampleValues": [
+        "5/2/16",
+        "9/3/25",
+        "8/1/16"
+      ]
+    },
+    {
+      "column": "DATE_3348",
+      "definition": "No definition found",
+      "fillRate": "6.1%",
+      "filledRows": 61,
+      "sampleValues": [
+        "2/1/22",
+        "2/1/24",
+        "2/1/18"
+      ]
+    },
+    {
+      "column": "DTL_ORDER_SEQ",
+      "definition": "Detail sequence; used for internal sorting",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "0"
+      ]
+    },
+    {
+      "column": "HOCAT",
+      "definition": "No definition found",
+      "fillRate": "26.8%",
+      "filledRows": 268,
+      "sampleValues": [
+        "A1",
+        "E1",
+        "A2"
+      ]
+    },
+    {
+      "column": "INTDUE",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "19.76",
+        "77.04",
+        "77.17"
+      ]
+    },
+    {
+      "column": "LEGACRES",
+      "definition": "Legal acreage of the property.",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "0.1014",
+        "0.1702",
+        "0.1791"
+      ]
+    },
+    {
+      "column": "LEGALSTATUS",
+      "definition": "Legal case status:P — Pending\r\n\r\nTaxes are delinquent.\r\n\r\nA lawsuit has NOT started yet.\r\n\r\nOwner still has full control.\r\n\r\nThis is the earliest stage of trouble.\r\n\r\nBest stage for early outreach and door knocking.\r\nDetect New Pending Properties\r\n\r\nIf a property shows up with P that did NOT exist last month, mark as new lead.\r\nA — Active\r\n\r\nA tax lawsuit has been filed and is currently active.\r\n\r\nOwner is now in the legal process with the county.\r\n\r\nMotivation increases because court fees are adding up.\r\n\r\nYour software should flag P → A as an escalation.\r\n\r\nJ — Judgment\r\n\r\nThe court has issued a final judgment against the owner.\r\n\r\nProperty is eligible to be scheduled for a sheriff sale.\r\n\r\nHighest urgency.\r\n\r\nYour software should flag A → J as a critical change.",
+      "fillRate": "17.0%",
+      "filledRows": 170,
+      "sampleValues": [
+        "P",
+        "A",
+        "J"
+      ]
+    },
+    {
+      "column": "LEVY_BALANCE",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "17.03",
+        "856.03",
+        "857.54"
+      ]
+    },
+    {
+      "column": "LGLSTRING",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "NCB: 276 BLK: 4 LOT: 17 VISTA VERDE SOUTH UNIT-7",
+        "NCB 753 BLK LOT S 108.5 FT OF W 68.2 FT OF A18",
+        "NCB 945 BLK 2 LOT 29"
+      ]
+    },
+    {
+      "column": "MAX_YEAR",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "2011",
+        "2024",
+        "2023"
+      ]
+    },
+    {
+      "column": "MIN_YEAR",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "2011",
+        "2024",
+        "2022"
+      ]
+    },
+    {
+      "column": "NQCAT",
+      "definition": "No definition found",
+      "fillRate": "73.9%",
+      "filledRows": 739,
+      "sampleValues": [
+        "C1",
+        "A1",
+        "F1"
+      ]
+    },
+    {
+      "column": "OTHER_FEE",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "0",
+        "13.14",
+        "6.57"
+      ]
+    },
+    {
+      "column": "OWNERNO",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "0"
+      ]
+    },
+    {
+      "column": "PANDI",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "20.78",
+        "179.77",
+        "180.08"
+      ]
+    },
+    {
+      "column": "PANDI_ATTY",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "28.35",
+        "374.49",
+        "180.08"
+      ]
+    },
+    {
+      "column": "PANDI_FLAG",
+      "definition": "No definition found",
+      "fillRate": "0.1%",
+      "filledRows": 1,
+      "sampleValues": [
+        "S"
+      ]
+    },
+    {
+      "column": "PAY_AGREE_NO",
+      "definition": "No definition found",
+      "fillRate": "3.6%",
+      "filledRows": 36,
+      "sampleValues": [
+        "305480",
+        "278508",
+        "311944"
+      ]
+    },
+    {
+      "column": "PENDUE",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "1.02",
+        "102.73",
+        "102.91"
+      ]
+    },
+    {
+      "column": "PNUMBER",
+      "definition": "Target Property number",
+      "fillRate": "94.5%",
+      "filledRows": 945,
+      "sampleValues": [
+        "203",
+        "715",
+        "406"
+      ]
+    },
+    {
+      "column": "PPSTATUS",
+      "definition": "No definition found",
+      "fillRate": "3.6%",
+      "filledRows": 36,
+      "sampleValues": [
+        "D1",
+        "AC"
+      ]
+    },
+    {
+      "column": "PP_BEGIN_DATE",
+      "definition": "Payment Plan BEGIN DATE",
+      "fillRate": "3.6%",
+      "filledRows": 36,
+      "sampleValues": [
+        "6/15/25",
+        "11/15/23",
+        "10/15/25"
+      ]
+    },
+    {
+      "column": "PP_END_DATE",
+      "definition": "Payment Plan END DATE",
+      "fillRate": "3.6%",
+      "filledRows": 36,
+      "sampleValues": [
+        "11/15/25",
+        "4/15/24",
+        "3/15/26"
+      ]
+    },
+    {
+      "column": "PP_PAYMENT_TYPE",
+      "definition": "No definition found",
+      "fillRate": "3.6%",
+      "filledRows": 36,
+      "sampleValues": [
+        "M",
+        "P",
+        "H"
+      ]
+    },
+    {
+      "column": "PSTRNAME",
+      "definition": "Target property street name",
+      "fillRate": "99.6%",
+      "filledRows": 996,
+      "sampleValues": [
+        "COLIMA ST",
+        "W POPLAR ST",
+        "MISSION ST"
+      ]
+    },
+    {
+      "column": "RCV_DUE_DATE",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "3/1/16",
+        "2/1/25",
+        "2/1/24"
+      ]
+    },
+    {
+      "column": "RECTYPE",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "TL"
+      ]
+    },
+    {
+      "column": "REQUEST_SEQ",
+      "definition": "Internal request number for the report.",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "959740"
+      ]
+    },
+    {
+      "column": "ROLL",
+      "definition": "Which roll the account is currently in — Real, Personal, Mineral, Omitted, Supplemental, etc.",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "R",
+        "M",
+        "P"
+      ]
+    },
+    {
+      "column": "RPT_ORDER_SEQ",
+      "definition": "Determines report ordering inside the system.",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    {
+      "column": "SPECIAL_STATUS",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "N"
+      ]
+    },
+    {
+      "column": "TAXDEFEND",
+      "definition": "Date tax delinquency ended or last updated.",
+      "fillRate": "1.4%",
+      "filledRows": 14,
+      "sampleValues": [
+        "12/31/20",
+        "8/27/23",
+        "12/31/24"
+      ]
+    },
+    {
+      "column": "TAXDEFSTRT",
+      "definition": "Date tax delinquency started.",
+      "fillRate": "9.1%",
+      "filledRows": 91,
+      "sampleValues": [
+        "10/28/14",
+        "1/30/15",
+        "10/6/15"
+      ]
+    },
+    {
+      "column": "TOT_PERCAN",
+      "definition": "Total Taxes Owed",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "45.38",
+        "1230.52",
+        "1037.62"
+      ]
+    },
+    {
+      "column": "T_SPLIT_PAYMENT_FLAG",
+      "definition": "Indicates if the taxpayer is on the “split payment” plan",
+      "fillRate": "3.3%",
+      "filledRows": 33,
+      "sampleValues": [
+        "Q",
+        "H"
+      ]
+    },
+    {
+      "column": "YEAR",
+      "definition": "No definition found",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "0"
+      ]
+    },
+    {
+      "column": "ZIPCODE",
+      "definition": "Mailing Zip Code",
+      "fillRate": "100.0%",
+      "filledRows": 1000,
+      "sampleValues": [
+        "782612398",
+        "78212",
+        "78210"
+      ]
+    }
+  ],
+  "irrelevantColumns": [
+    "BILLSUPPR",
+    "DELAYED_OMIT_PROP_DATE",
+    "DIST_PAIDDATE",
+    "MILDEFEND",
+    "MILDEFSTRT",
+    "OMIT_CODE",
+    "RECEIPT",
+    "TAXUNIT"
+  ]
+}
