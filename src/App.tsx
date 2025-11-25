@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MapPin, TrendingUp, Menu, Home, History, Upload } from 'lucide-react';
+import { TrendingUp, Menu, Home, History, Upload } from 'lucide-react'; // Removed MapPin (Route Planner disabled)
 import { LoadScript } from '@react-google-maps/api';
-import RoutePlanner from './components/RoutePlanner';
+// import RoutePlanner from './components/RoutePlanner'; // Disabled for performance
 import TaxTracker from './components/TaxTracker';
 import Dashboard from './components/Dashboard';
 import FileHistory from './components/FileHistory';
@@ -13,7 +13,7 @@ if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY') 
   console.warn('⚠️ Google Maps API key not configured. Please set VITE_GOOGLE_MAPS_API_KEY in your .env file');
 }
 
-type Tab = 'dashboard' | 'route' | 'tracker' | 'history';
+type Tab = 'dashboard' | 'tracker' | 'history'; // Removed 'route' for performance
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('history'); // Default to File History tab
@@ -189,7 +189,8 @@ export default function App() {
                   <Home className="w-5 h-5" />
                   <span className="font-medium">Dashboard</span>
                 </button>
-                <button
+                {/* Route Planner tab disabled for performance */}
+                {/* <button
                   onClick={() => setActiveTab('route')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     activeTab === 'route'
@@ -199,7 +200,7 @@ export default function App() {
                 >
                   <MapPin className="w-5 h-5" />
                   <span className="font-medium">Route Planner</span>
-                </button>
+                </button> */}
                 <button
                   onClick={() => setActiveTab('tracker')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -258,7 +259,8 @@ export default function App() {
         {/* Tab Content */}
         <div className="w-full">
           {activeTab === 'dashboard' && <Dashboard />}
-          {activeTab === 'route' && <RoutePlanner />}
+          {/* Route Planner disabled for performance */}
+          {/* {activeTab === 'route' && <RoutePlanner />} */}
           {activeTab === 'tracker' && <TaxTracker />}
           {activeTab === 'history' && <FileHistory />}
         </div>
