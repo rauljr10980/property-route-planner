@@ -973,12 +973,19 @@ export default function TaxTracker() {
                         ) : (
                           getFilteredStatusChanges().map((change, idx) => {
                           const prop = change.property;
-                          const propertyId = prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
+                          // Use CAN as Property ID (Column E)
+                          const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
+                          // Get the columns the user specified: Q (Pnumber), R (PSTRNAME), AE (LEGALSTATUS), BE (TOT_PERCAN)
+                          const pnumber = prop.Pnumber || prop['Pnumber'] || '';
+                          const pstrname = prop.PSTRNAME || prop['PSTRNAME'] || '';
+                          const legalstatus = prop.LEGALSTATUS || prop['LEGALSTATUS'] || '';
+                          const tot_percan = prop.TOT_PERCAN || prop['TOT_PERCAN'] || '';
+                          const addrstring = prop.ADDRSTRING || prop['ADDRSTRING'] || prop.address || prop.Address || '';
+                          const zipCode = prop.ZIP_CODE || prop['ZIP_CODE'] || prop.zipCode || '';
                           const requestSeq = prop['Request Seq.'] || prop['Request Seq'] || '';
                           const empty1 = prop['__EMPTY'] || '';
                           const empty2 = prop['__EMPTY_1'] || '';
                           const county = prop['BEXAR COUNTY'] || prop['County'] || 'BEXAR COUNTY';
-                          const address = prop.address || prop.Address || '';
                           
                           return (
                             <tr key={idx} className="hover:bg-gray-50">
@@ -1007,13 +1014,18 @@ export default function TaxTracker() {
                                   </span>
                                 )}
                               </td>
-                              <td className="px-3 py-2 text-xs text-gray-600">
-                                <div className="space-y-0.5">
+                              <td className="px-3 py-2 text-xs text-gray-700">
+                                <div className="space-y-1">
+                                  {pnumber && <div><strong>Pnumber (Q):</strong> {pnumber}</div>}
+                                  {pstrname && <div><strong>PSTRNAME (R):</strong> {pstrname}</div>}
+                                  {legalstatus && <div><strong>LEGALSTATUS (AE):</strong> {legalstatus}</div>}
+                                  {tot_percan && <div><strong>TOT_PERCAN (BE):</strong> {tot_percan}</div>}
+                                  {addrstring && <div><strong>Address (H):</strong> {addrstring}</div>}
+                                  {zipCode && <div><strong>ZIP (I):</strong> {zipCode}</div>}
                                   {requestSeq && <div>Request Seq.: {requestSeq}</div>}
                                   {empty1 && <div>__EMPTY: {empty1}</div>}
                                   {empty2 && <div>__EMPTY_1: {empty2}</div>}
                                   {county && <div>{county}</div>}
-                                  {address && <div>{address}</div>}
                                 </div>
                               </td>
                               <td className="px-3 py-2 text-xs text-gray-600">

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, TrendingUp, Map, Filter, TrendingDown, Minus, DollarSign, Users } from 'lucide-react';
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { loadSharedProperties } from '../utils/sharedData';
 
 const mapContainerStyle = {
   width: '100%',
@@ -27,13 +28,45 @@ export default function Dashboard() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [trendFilter, setTrendFilter] = useState<'all' | 'increasing' | 'stable' | 'decreasing'>('all');
+  const [statusFilter, setStatusFilter] = useState<Set<'J' | 'A' | 'P'>>(new Set(['J', 'A', 'P']));
   const [mapCenter, setMapCenter] = useState({ lat: 29.4241, lng: -98.4936 });
   const [mapZoom, setMapZoom] = useState(11);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [geocodedProperties, setGeocodedProperties] = useState<Property[]>([]);
+  
+  // Helper to get status from property
+  const getPropertyStatus = (prop: Property): string | null => {
+    if (prop.LEGALSTATUS) {
+      const value = String(prop.LEGALSTATUS).trim().toUpperCase();
+      if (value.includes('J') || value === 'JUDGMENT') return 'J';
+      if (value.includes('A') || value === 'ACTIVE') return 'A';
+      if (value.includes('P') || value === 'PENDING') return 'P';
+      if (value === 'J' || value === 'A' || value === 'P') return value;
+    }
+    const statusKeys = ['Status', 'Judgment Status', 'Tax Status', 'Foreclosure Status', 'currentStatus'];
+    for (const key of statusKeys) {
+      if (prop[key]) {
+        const value = String(prop[key]).trim().toUpperCase();
+        if (value === 'J' || value === 'A' || value === 'P') {
+          return value;
+        }
+      }
+    }
+    return null;
+  };
 
   useEffect(() => {
     loadData();
+    
+    // Listen for property updates
+    const handlePropertiesUpdated = (event: CustomEvent) => {
+      loadData();
+    };
+    
+    window.addEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
+    return () => {
+      window.removeEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
+    };
   }, []);
 
   useEffect(() => {
@@ -42,18 +75,31 @@ export default function Dashboard() {
     }
   }, [properties]);
 
-  const loadData = () => {
+  const loadData = async () => {
     try {
-      const savedProperties = localStorage.getItem('property-tax-properties');
-      if (savedProperties) {
-        const parsedProps = JSON.parse(savedProperties);
-        setProperties(parsedProps);
-      }
+      setLoading(true);
+      // Load from shared storage (GCS → IndexedDB → localStorage)
+      const { properties: sharedProps } = await loadSharedProperties();
+      setProperties(sharedProps);
+      console.log(`✅ Dashboard loaded ${sharedProps.length} properties`);
     } catch (error) {
       console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
+  useEffect(() => {
+    // Listen for property updates
+    const handlePropertiesUpdated = (event: CustomEvent) => {
+      loadData();
+    };
+    
+    window.addEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
+    return () => {
+      window.removeEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
+    };
+  }, []);
 
   const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
     if (!window.google || !window.google.maps) {
@@ -126,8 +172,22 @@ export default function Dashboard() {
   }, []);
 
   const getFilteredProperties = (): Property[] => {
-    if (trendFilter === 'all') return geocodedProperties.length > 0 ? geocodedProperties : properties;
-    return (geocodedProperties.length > 0 ? geocodedProperties : properties).filter(p => p.balanceTrend === trendFilter);
+    let filtered = geocodedProperties.length > 0 ? geocodedProperties : properties;
+    
+    // Filter by trend
+    if (trendFilter !== 'all') {
+      filtered = filtered.filter(p => p.balanceTrend === trendFilter);
+    }
+    
+    // Filter by status (J, A, P)
+    if (statusFilter.size < 3) {
+      filtered = filtered.filter(p => {
+        const status = getPropertyStatus(p);
+        return status && statusFilter.has(status as 'J' | 'A' | 'P');
+      });
+    }
+    
+    return filtered;
   };
 
   const getAggregatedTrendData = () => {
@@ -303,6 +363,56 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
                 <h2 className="text-2xl font-bold text-gray-900">Balance Trends Analysis</h2>
                 <div className="flex gap-2 flex-wrap">
+                  {/* Status Filters (J, A, P) */}
+                  <div className="flex gap-2 border-r border-gray-300 pr-2 mr-2">
+                    <button
+                      onClick={() => {
+                        if (statusFilter.size === 3) {
+                          setStatusFilter(new Set());
+                        } else {
+                          setStatusFilter(new Set(['J', 'A', 'P']));
+                        }
+                      }}
+                      className={`px-3 py-2 rounded-md text-xs font-semibold transition ${
+                        statusFilter.size === 3
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                      }`}
+                    >
+                      All Status ({properties.filter(p => getPropertyStatus(p)).length})
+                    </button>
+                    {(['J', 'A', 'P'] as const).map((status) => {
+                      const count = properties.filter(p => getPropertyStatus(p) === status).length;
+                      const isSelected = statusFilter.has(status);
+                      return (
+                        <button
+                          key={status}
+                          onClick={() => {
+                            const newFilter = new Set(statusFilter);
+                            if (isSelected) {
+                              newFilter.delete(status);
+                            } else {
+                              newFilter.add(status);
+                            }
+                            setStatusFilter(newFilter);
+                          }}
+                          className={`px-3 py-2 rounded-md text-xs font-semibold transition ${
+                            isSelected
+                              ? status === 'J'
+                                ? 'bg-red-600 text-white'
+                                : status === 'A'
+                                ? 'bg-yellow-600 text-white'
+                                : 'bg-blue-600 text-white'
+                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                          }`}
+                        >
+                          {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({count})
+                        </button>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Trend Filters */}
                   <button
                     onClick={() => setTrendFilter('all')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
@@ -312,7 +422,7 @@ export default function Dashboard() {
                     }`}
                   >
                     <Filter size={16} />
-                    All Properties
+                    All Trends
                   </button>
                   <button
                     onClick={() => setTrendFilter('increasing')}
