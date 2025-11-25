@@ -156,10 +156,15 @@ class GCSStorageService {
     uploadDate: string,
     onProgress?: (progress: number, message: string) => void
   ): Promise<{
-    properties: any[];
-    newStatusChanges: any[];
-    metadata: any;
-    storage: { storagePath: string; publicUrl: string };
+    properties?: any[]; // Optional - backend may not return all properties
+    newStatusChanges?: any[];
+    metadata?: any;
+    storage?: { storagePath: string; publicUrl: string };
+    propertiesSaved?: boolean; // Flag indicating properties were saved to GCS
+    status?: 'processing' | 'complete'; // Background processing status
+    message?: string;
+    filename?: string;
+    fileSize?: number;
   }> {
     try {
       onProgress?.(10, 'Uploading file to server...');
@@ -187,6 +192,9 @@ class GCSStorageService {
 
       onProgress?.(100, 'Complete!');
 
+      // Backend now returns only status changes, not all properties
+      // Frontend needs to load properties separately if needed
+      // This reduces response size from 5MB+ to <100KB
       return result;
     } catch (error: any) {
       console.error('Process file error:', error);

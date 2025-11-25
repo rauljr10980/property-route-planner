@@ -48,6 +48,10 @@ export default function TaxTracker() {
   const [currentPage, setCurrentPage] = useState<'home' | 'data'>('home');
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
+  
+  // Pagination state
+  const [currentPageNum, setCurrentPageNum] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [enriching, setEnriching] = useState(false);
@@ -1053,7 +1057,15 @@ export default function TaxTracker() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {properties.map((prop, idx) => {
+                    {(() => {
+                      // Pagination logic
+                      const filteredProperties = getFilteredStatusChanges();
+                      const totalPages = Math.ceil(filteredProperties.length / itemsPerPage);
+                      const startIndex = (currentPageNum - 1) * itemsPerPage;
+                      const endIndex = startIndex + itemsPerPage;
+                      const paginatedProperties = filteredProperties.slice(startIndex, endIndex);
+                      
+                      return paginatedProperties.map((prop, idx) => {
                       const accountNum = prop.accountNumber || prop['Account Number'];
                       const owner = prop.owner || prop.Owner || 'Unknown';
                       const address = prop.address || prop.Address || '';
@@ -1117,9 +1129,75 @@ export default function TaxTracker() {
                           </td>
                         </tr>
                       );
-                    })}
+                    });
+                    })()}
                   </tbody>
                 </table>
+                
+                {/* Pagination Controls for All Properties */}
+                {(() => {
+                  const totalPages = Math.ceil(properties.length / itemsPerPage);
+                  const startIndex = (currentPageNum - 1) * itemsPerPage;
+                  const endIndex = Math.min(startIndex + itemsPerPage, properties.length);
+                  
+                  if (totalPages <= 1) return null;
+                  
+                  return (
+                    <div className="flex items-center justify-between mt-4 px-4 py-3 bg-gray-50 border-t border-gray-200">
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm text-gray-700">
+                          Showing {startIndex + 1} to {endIndex} of {properties.length} properties
+                        </span>
+                        <select
+                          value={itemsPerPage}
+                          onChange={(e) => {
+                            setItemsPerPage(Number(e.target.value));
+                            setCurrentPageNum(1);
+                          }}
+                          className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value={25}>25 per page</option>
+                          <option value={50}>50 per page</option>
+                          <option value={100}>100 per page</option>
+                          <option value={200}>200 per page</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setCurrentPageNum(1)}
+                          disabled={currentPageNum === 1}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                        >
+                          First
+                        </button>
+                        <button
+                          onClick={() => setCurrentPageNum(p => Math.max(1, p - 1))}
+                          disabled={currentPageNum === 1}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                        >
+                          Previous
+                        </button>
+                        <span className="px-4 py-1.5 text-sm text-gray-700">
+                          Page {currentPageNum} of {totalPages}
+                        </span>
+                        <button
+                          onClick={() => setCurrentPageNum(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPageNum === totalPages}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                        >
+                          Next
+                        </button>
+                        <button
+                          onClick={() => setCurrentPageNum(totalPages)}
+                          disabled={currentPageNum === totalPages}
+                          className="px-3 py-1.5 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
+                        >
+                          Last
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           ) : (

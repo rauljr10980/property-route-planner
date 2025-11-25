@@ -1,5 +1,6 @@
 import { Property } from './fileProcessor';
 import gcsStorage from '../services/gcsStorage';
+import { saveToIndexedDB, loadFromIndexedDB, isIndexedDBAvailable, clearIndexedDB } from './indexedDB';
 
 const PROPERTIES_KEY = 'property-tax-shared-properties';
 const LAST_UPLOAD_KEY = 'property-tax-last-upload';
@@ -9,31 +10,34 @@ export interface SharedDataState {
   lastUploadDate: string | null;
 }
 
-// Save shared property data (to both GCS and localStorage)
+// Save shared property data (to GCS, IndexedDB, and localStorage)
 export async function saveSharedProperties(properties: Property[], uploadDate: string): Promise<void> {
   try {
-    // Try to save to localStorage first (fast, for immediate use)
-    // If localStorage is full, skip it and only use GCS
+    // Priority 1: Save to GCS (primary persistent storage)
+    try {
+      await gcsStorage.saveProperties(properties, uploadDate);
+    } catch (gcsError) {
+      console.warn('Failed to save to GCS:', gcsError);
+    }
+    
+    // Priority 2: Save to IndexedDB (supports 50MB+, better than localStorage)
+    if (isIndexedDBAvailable()) {
+      try {
+        await saveToIndexedDB(properties, uploadDate);
+      } catch (indexedDBError) {
+        console.warn('Failed to save to IndexedDB:', indexedDBError);
+      }
+    }
+    
+    // Priority 3: Save to localStorage (fallback, limited to 5-10MB)
     try {
       localStorage.setItem(PROPERTIES_KEY, JSON.stringify(properties));
       localStorage.setItem(LAST_UPLOAD_KEY, uploadDate);
     } catch (localError) {
       if (localError instanceof DOMException && localError.name === 'QuotaExceededError') {
-        console.warn('localStorage is full, skipping localStorage save. Using GCS only.');
-        // Continue - we'll save to GCS which is the persistent storage anyway
+        console.warn('localStorage is full, skipping localStorage save.');
       } else {
         throw localError;
-      }
-    }
-    
-    // Always save to GCS for persistence (this is the primary storage)
-    try {
-      await gcsStorage.saveProperties(properties, uploadDate);
-    } catch (gcsError) {
-      console.warn('Failed to save to GCS:', gcsError);
-      // If GCS fails and localStorage also failed, throw error
-      if (localStorage.getItem(PROPERTIES_KEY) === null) {
-        throw new Error('Failed to save to both localStorage and GCS. Please check your connection and try again.');
       }
     }
     
@@ -47,17 +51,28 @@ export async function saveSharedProperties(properties: Property[], uploadDate: s
   }
 }
 
-// Load shared property data (from GCS first, fallback to localStorage)
+// Load shared property data (from GCS first, then IndexedDB, then localStorage)
 export async function loadSharedProperties(): Promise<SharedDataState> {
   try {
-    // Try to load from GCS first (persistent storage)
+    // Priority 1: Try to load from GCS (primary persistent storage)
     try {
       const gcsData = await gcsStorage.loadProperties();
       if (gcsData.properties.length > 0) {
-        // Update localStorage with GCS data
-        localStorage.setItem(PROPERTIES_KEY, JSON.stringify(gcsData.properties));
-        if (gcsData.uploadDate) {
-          localStorage.setItem(LAST_UPLOAD_KEY, gcsData.uploadDate);
+        // Update IndexedDB and localStorage with GCS data
+        if (isIndexedDBAvailable()) {
+          try {
+            await saveToIndexedDB(gcsData.properties, gcsData.uploadDate || '');
+          } catch (e) {
+            console.warn('Failed to update IndexedDB:', e);
+          }
+        }
+        try {
+          localStorage.setItem(PROPERTIES_KEY, JSON.stringify(gcsData.properties));
+          if (gcsData.uploadDate) {
+            localStorage.setItem(LAST_UPLOAD_KEY, gcsData.uploadDate);
+          }
+        } catch (e) {
+          console.warn('Failed to update localStorage:', e);
         }
         return {
           properties: gcsData.properties,
@@ -65,10 +80,25 @@ export async function loadSharedProperties(): Promise<SharedDataState> {
         };
       }
     } catch (gcsError) {
-      console.log('GCS not available, using localStorage:', gcsError);
+      console.log('GCS not available, trying IndexedDB:', gcsError);
     }
 
-    // Fallback to localStorage
+    // Priority 2: Try to load from IndexedDB (supports large data)
+    if (isIndexedDBAvailable()) {
+      try {
+        const indexedDBData = await loadFromIndexedDB();
+        if (indexedDBData.properties.length > 0) {
+          return {
+            properties: indexedDBData.properties,
+            lastUploadDate: indexedDBData.uploadDate
+          };
+        }
+      } catch (indexedDBError) {
+        console.log('IndexedDB not available, using localStorage:', indexedDBError);
+      }
+    }
+
+    // Priority 3: Fallback to localStorage
     const propertiesJson = localStorage.getItem(PROPERTIES_KEY);
     const lastUpload = localStorage.getItem(LAST_UPLOAD_KEY);
     
@@ -105,10 +135,20 @@ export function loadSharedPropertiesSync(): SharedDataState {
 }
 
 // Clear shared property data
-export function clearSharedProperties(): void {
+export async function clearSharedProperties(): Promise<void> {
   try {
+    // Clear localStorage
     localStorage.removeItem(PROPERTIES_KEY);
     localStorage.removeItem(LAST_UPLOAD_KEY);
+    
+    // Clear IndexedDB
+    if (isIndexedDBAvailable()) {
+      try {
+        await clearIndexedDB();
+      } catch (e) {
+        console.warn('Failed to clear IndexedDB:', e);
+      }
+    }
     
     // Trigger custom event
     window.dispatchEvent(new CustomEvent('propertiesUpdated', {

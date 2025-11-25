@@ -8,7 +8,7 @@ import { Storage } from '@google-cloud/storage';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import * as XLSX from 'xlsx';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,8 +19,196 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+// CORS: Restrict to GitHub Pages domain for security
+const allowedOrigins = [
+  'https://rauljr10980.github.io',
+  'http://localhost:3000',
+  'http://localhost:5173', // Vite dev server
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman, etc.) in development
+    if (!origin && process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.use(express.json({ limit: '10mb' })); // Limit JSON payload size
+
+// ============================================================================
+// COST CONTROL & RATE LIMITING - Budget: $10/month
+// ============================================================================
+
+// Rate limiting for status-related requests (J, A, P)
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 100; // 100 requests per minute per IP
+
+// Daily quotas to prevent cost overruns
+const dailyQuotaMap = new Map();
+const DAILY_QUOTA_WINDOW = 24 * 60 * 60 * 1000; // 24 hours
+
+// Cost-aware limits (conservative to stay within $10/month budget)
+const COST_LIMITS = {
+  // File processing is expensive (CPU, memory, GCS operations)
+  PROCESS_FILE_PER_DAY: 10,        // Max 10 file uploads per day per IP
+  PROCESS_FILE_PER_HOUR: 3,        // Max 3 file uploads per hour per IP
+  PROCESS_FILE_SIZE_MB: 20,         // Max 20MB per file (reduced from 50MB)
+  
+  // Status-related API calls
+  STATUS_REQUESTS_PER_DAY: 500,    // Max 500 status requests per day per IP
+  STATUS_REQUESTS_PER_HOUR: 100,   // Max 100 status requests per hour per IP
+  
+  // General API calls
+  GENERAL_REQUESTS_PER_DAY: 1000,  // Max 1000 general requests per day per IP
+  GENERAL_REQUESTS_PER_HOUR: 200,  // Max 200 general requests per hour per IP
+  
+  // GCS operations (read/write costs money)
+  GCS_OPERATIONS_PER_DAY: 200,     // Max 200 GCS operations per day per IP
+};
+
+// Check if request involves J, A, or P status
+const involvesStatus = (req) => {
+  // Status-related endpoints that always process J/A/P status
+  const statusEndpoints = [
+    '/api/process-file',      // Processes Excel and detects J/A/P status changes
+    '/api/load-properties',   // Loads properties which contain J/A/P status
+    '/api/save-properties'    // Saves properties which contain J/A/P status
+  ];
+  
+  // Check if endpoint is status-related
+  if (statusEndpoints.some(endpoint => req.path === endpoint || req.path.includes(endpoint))) {
+    return true;
+  }
+  
+  // Check query parameters for status filters (J, A, P)
+  if (req.query) {
+    const queryStr = JSON.stringify(req.query).toUpperCase();
+    if (queryStr.includes('"J"') || queryStr.includes('"A"') || queryStr.includes('"P"') ||
+        queryStr.includes('JUDGMENT') || queryStr.includes('ACTIVE') || queryStr.includes('PENDING') ||
+        queryStr.includes('STATUS')) {
+      return true;
+    }
+  }
+  
+  // Check request body for status-related data (only if body is already parsed)
+  if (req.body && typeof req.body === 'object') {
+    const bodyStr = JSON.stringify(req.body).toUpperCase();
+    // Check for status-related fields
+    if (bodyStr.includes('"STATUS"') || bodyStr.includes('"LEGALSTATUS"') ||
+        bodyStr.includes('"CURRENTSTATUS"') || bodyStr.includes('"PREVIOUSSTATUS"') ||
+        bodyStr.includes('"NEWSTATUS"') || bodyStr.includes('"OLDSTATUS"')) {
+      // Check if body contains J, A, or P status values
+      if (bodyStr.match(/["\']J["\']|["\']A["\']|["\']P["\']/)) {
+        return true;
+      }
+    }
+    // Check for properties array that might contain status
+    if (bodyStr.includes('"PROPERTIES"') && 
+        (bodyStr.includes('"J"') || bodyStr.includes('"A"') || bodyStr.includes('"P"'))) {
+      return true;
+    }
+  }
+  
+  return false;
+};
+
+// Daily quota checker
+const checkDailyQuota = (ip, operationType, limit) => {
+  const now = Date.now();
+  const dayKey = `${ip}-${operationType}-${Math.floor(now / DAILY_QUOTA_WINDOW)}`;
+  const hourKey = `${ip}-${operationType}-${Math.floor(now / (60 * 60 * 1000))}`;
+  
+  // Clean up old entries
+  if (dailyQuotaMap.size > 50000) {
+    for (const [key, value] of dailyQuotaMap.entries()) {
+      if (now - value.firstRequest > DAILY_QUOTA_WINDOW) {
+        dailyQuotaMap.delete(key);
+      }
+    }
+  }
+  
+  const daily = dailyQuotaMap.get(dayKey) || { count: 0, firstRequest: now };
+  const hourly = dailyQuotaMap.get(hourKey) || { count: 0, firstRequest: now };
+  
+  return { daily, hourly, dayKey, hourKey };
+};
+
+// Enhanced rate limiting with daily quotas
+const statusRateLimit = (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const now = Date.now();
+  
+  // Check if request involves status
+  const isStatusRequest = involvesStatus(req);
+  
+  if (isStatusRequest) {
+    // Check daily/hourly quotas for status requests
+    const { daily, hourly, dayKey, hourKey } = checkDailyQuota(ip, 'status', COST_LIMITS.STATUS_REQUESTS_PER_DAY);
+    
+    if (daily.count >= COST_LIMITS.STATUS_REQUESTS_PER_DAY) {
+      return res.status(429).json({ 
+        error: 'Daily quota exceeded. Maximum 500 status-related requests per day to control costs.',
+        quotaType: 'daily',
+        limit: COST_LIMITS.STATUS_REQUESTS_PER_DAY,
+        retryAfter: Math.ceil((DAILY_QUOTA_WINDOW - (now - daily.firstRequest)) / 1000)
+      });
+    }
+    
+    if (hourly.count >= COST_LIMITS.STATUS_REQUESTS_PER_HOUR) {
+      return res.status(429).json({ 
+        error: 'Hourly quota exceeded. Maximum 100 status-related requests per hour.',
+        quotaType: 'hourly',
+        limit: COST_LIMITS.STATUS_REQUESTS_PER_HOUR,
+        retryAfter: 3600
+      });
+    }
+    
+    // Update quotas
+    daily.count++;
+    hourly.count++;
+    dailyQuotaMap.set(dayKey, daily);
+    dailyQuotaMap.set(hourKey, hourly);
+    
+    // Also check per-minute rate limit
+    if (rateLimitMap.size > 10000) {
+      for (const [key, value] of rateLimitMap.entries()) {
+        if (now - value.firstRequest > RATE_LIMIT_WINDOW) {
+          rateLimitMap.delete(key);
+        }
+      }
+    }
+    
+    const key = `${ip}-${Math.floor(now / RATE_LIMIT_WINDOW)}`;
+    const current = rateLimitMap.get(key) || { count: 0, firstRequest: now };
+    
+    if (current.count >= RATE_LIMIT_MAX_REQUESTS) {
+      return res.status(429).json({ 
+        error: 'Too many status-related requests. Please try again later.',
+        retryAfter: Math.ceil((RATE_LIMIT_WINDOW - (now - current.firstRequest)) / 1000)
+      });
+    }
+    
+    current.count++;
+    rateLimitMap.set(key, current);
+  }
+  
+  next();
+};
+
+// Apply rate limiting to all API endpoints
+app.use('/api', statusRateLimit);
 
 // Initialize Google Cloud Storage
 let storage;
@@ -73,17 +261,77 @@ try {
   process.exit(1);
 }
 
-// Configure multer for file uploads (memory storage)
+// Configure multer for file uploads
+// Use disk storage for large files to avoid memory issues
+const uploadDir = path.join(__dirname, 'uploads');
+try {
+  mkdirSync(uploadDir, { recursive: true });
+} catch (err) {
+  // Directory might already exist
+}
+
 const upload = multer({
-  storage: multer.memoryStorage(),
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
   limits: {
     fileSize: 50 * 1024 * 1024 // 50 MB max
+  },
+  fileFilter: (req, file, cb) => {
+    // Validate file type
+    const allowedMimes = [
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+      'application/vnd.ms-excel', // .xls
+      'application/octet-stream' // Some systems send this for Excel
+    ];
+    
+    const allowedExtensions = ['.xlsx', '.xls'];
+    const fileExt = path.extname(file.originalname).toLowerCase();
+    
+    if (!allowedExtensions.includes(fileExt)) {
+      return cb(new Error('Invalid file type. Only .xlsx and .xls files are allowed.'));
+    }
+    
+    if (!allowedMimes.includes(file.mimetype) && file.mimetype !== 'application/octet-stream') {
+      // Allow octet-stream as fallback (some browsers send this)
+      console.warn(`Unexpected MIME type: ${file.mimetype} for file: ${file.originalname}`);
+    }
+    
+    cb(null, true);
   }
 });
 
-// Health check
+// Health check (no rate limiting)
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'GCS API' });
+  res.json({ 
+    status: 'ok', 
+    service: 'GCS API',
+    timestamp: new Date().toISOString(),
+    limits: {
+      fileProcessing: {
+        perDay: COST_LIMITS.PROCESS_FILE_PER_DAY,
+        perHour: COST_LIMITS.PROCESS_FILE_PER_HOUR,
+        maxSizeMB: COST_LIMITS.PROCESS_FILE_SIZE_MB
+      },
+      statusRequests: {
+        perDay: COST_LIMITS.STATUS_REQUESTS_PER_DAY,
+        perHour: COST_LIMITS.STATUS_REQUESTS_PER_HOUR
+      },
+      generalRequests: {
+        perDay: COST_LIMITS.GENERAL_REQUESTS_PER_DAY,
+        perHour: COST_LIMITS.GENERAL_REQUESTS_PER_HOUR
+      },
+      gcsOperations: {
+        perDay: COST_LIMITS.GCS_OPERATIONS_PER_DAY
+      }
+    }
+  });
 });
 
 // Upload file
@@ -94,6 +342,40 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 
     const file = req.file;
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    // Check file size limit
+    const maxSizeMB = COST_LIMITS.PROCESS_FILE_SIZE_MB;
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > maxSizeMB) {
+      // Clean up temp file
+      if (file.path && !file.buffer) {
+        try { unlinkSync(file.path); } catch (e) {}
+      }
+      return res.status(400).json({ 
+        error: `File size exceeds limit of ${maxSizeMB}MB. Please split your file or compress it.`,
+        maxSizeMB,
+        fileSizeMB: fileSizeMB.toFixed(2)
+      });
+    }
+    
+    // Check GCS operations quota (GCS read/write costs money)
+    const { daily, dayKey } = checkDailyQuota(ip, 'gcs-operations', COST_LIMITS.GCS_OPERATIONS_PER_DAY);
+    if (daily.count >= COST_LIMITS.GCS_OPERATIONS_PER_DAY) {
+      // Clean up temp file
+      if (file.path && !file.buffer) {
+        try { unlinkSync(file.path); } catch (e) {}
+      }
+      return res.status(429).json({ 
+        error: 'Daily storage quota exceeded. Maximum 200 storage operations per day to control costs.',
+        quotaType: 'daily',
+        limit: COST_LIMITS.GCS_OPERATIONS_PER_DAY
+      });
+    }
+    
+    // Update quota
+    daily.count++;
+    dailyQuotaMap.set(dayKey, daily);
     const metadata = req.body.metadata ? JSON.parse(req.body.metadata) : {};
 
     // Create unique file path
@@ -103,7 +385,10 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     const fileRef = bucket.file(storagePath);
 
     // Upload to GCS
-    await fileRef.save(file.buffer, {
+    // Read file data (from disk if using disk storage)
+    const fileData = file.buffer || readFileSync(file.path);
+    
+    await fileRef.save(fileData, {
       metadata: {
         contentType: file.mimetype || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         metadata: {
@@ -312,13 +597,122 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
     }
 
     const file = req.file;
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const existingPropertiesJson = req.body.existingProperties || '[]';
     const uploadDate = req.body.uploadDate || new Date().toISOString();
 
+    // Check file size limit (reduced to 20MB to control costs)
+    const maxSizeMB = COST_LIMITS.PROCESS_FILE_SIZE_MB;
+    const fileSizeMB = file.size / (1024 * 1024);
+    if (fileSizeMB > maxSizeMB) {
+      // Clean up temp file
+      if (file.path && !file.buffer) {
+        try { unlinkSync(file.path); } catch (e) {}
+      }
+      return res.status(400).json({ 
+        error: `File size exceeds limit of ${maxSizeMB}MB. Large files consume more resources and cost more. Please split your file or compress it.`,
+        maxSizeMB,
+        fileSizeMB: fileSizeMB.toFixed(2)
+      });
+    }
+    
+    // Check daily quota for file processing (expensive operation)
+    const { daily, hourly, dayKey, hourKey } = checkDailyQuota(ip, 'process-file', COST_LIMITS.PROCESS_FILE_PER_DAY);
+    
+    if (daily.count >= COST_LIMITS.PROCESS_FILE_PER_DAY) {
+      // Clean up temp file
+      if (file.path && !file.buffer) {
+        try { unlinkSync(file.path); } catch (e) {}
+      }
+      return res.status(429).json({ 
+        error: 'Daily file processing quota exceeded. Maximum 10 file uploads per day to control costs. Please try again tomorrow.',
+        quotaType: 'daily',
+        limit: COST_LIMITS.PROCESS_FILE_PER_DAY,
+        retryAfter: Math.ceil((DAILY_QUOTA_WINDOW - (Date.now() - daily.firstRequest)) / 1000)
+      });
+    }
+    
+    if (hourly.count >= COST_LIMITS.PROCESS_FILE_PER_HOUR) {
+      // Clean up temp file
+      if (file.path && !file.buffer) {
+        try { unlinkSync(file.path); } catch (e) {}
+      }
+      return res.status(429).json({ 
+        error: 'Hourly file processing quota exceeded. Maximum 3 file uploads per hour. Please wait before uploading another file.',
+        quotaType: 'hourly',
+        limit: COST_LIMITS.PROCESS_FILE_PER_HOUR,
+        retryAfter: 3600
+      });
+    }
+    
+    // Update quotas
+    daily.count++;
+    hourly.count++;
+    dailyQuotaMap.set(dayKey, daily);
+    dailyQuotaMap.set(hourKey, hourly);
+    
     console.log(`📊 Processing file: ${file.originalname} (${file.size} bytes)`);
+    console.log(`📊 File processing quota: ${daily.count}/${COST_LIMITS.PROCESS_FILE_PER_DAY} today, ${hourly.count}/${COST_LIMITS.PROCESS_FILE_PER_HOUR} this hour`);
 
-    // Read Excel file - only read header row first to identify columns
-    const workbook = XLSX.read(file.buffer, { type: 'buffer', cellDates: false });
+    // Validate file is not empty
+    if (file.size === 0) {
+      // Clean up temp file
+      if (file.path) {
+        try { unlinkSync(file.path); } catch (e) {}
+      }
+      return res.status(400).json({ error: 'File is empty' });
+    }
+
+    // Return immediately - process in background to avoid blocking
+    // This makes the API responsive even for large files
+    res.json({
+      success: true,
+      message: 'File upload accepted. Processing in background...',
+      filename: file.originalname,
+      fileSize: file.size,
+      status: 'processing'
+    });
+
+    // Process file asynchronously (non-blocking)
+    processFileAsync(file, existingPropertiesJson, uploadDate, ip).catch(error => {
+      console.error('Background processing error:', error);
+      // Could store error status in GCS or send notification
+    });
+    
+    return; // Exit early - processing continues in background
+  } catch (error) {
+    // Clean up temp file on error
+    if (req.file?.path && !req.file?.buffer) {
+      try {
+        unlinkSync(req.file.path);
+      } catch (cleanupError) {
+        console.warn('⚠️ Failed to clean up temp file on error:', cleanupError.message);
+      }
+    }
+    console.error('Process file error:', error);
+    res.status(500).json({ 
+      error: error.message || 'File processing failed',
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  }
+});
+
+// Async file processing function (non-blocking)
+async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
+  try {
+    console.log(`📊 Starting background processing: ${file.originalname} (${file.size} bytes)`);
+    
+    // Read file from disk (disk storage) or buffer (memory storage fallback)
+    const fileBuffer = file.buffer || readFileSync(file.path);
+    
+    // Read Excel file with optimized options for large files
+    // Use dense mode to reduce memory usage
+    const workbook = XLSX.read(fileBuffer, { 
+      type: 'buffer', 
+      cellDates: false,
+      dense: false, // Sparse mode uses less memory
+      sheetStubs: false // Don't load empty cells
+    });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     
@@ -544,7 +938,10 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
     const storagePath = `files/${timestamp}-${sanitizedFilename}`;
     const fileRef = bucket.file(storagePath);
 
-    await fileRef.save(file.buffer, {
+    // Read file for upload (from disk if using disk storage)
+    const fileDataForUpload = file.buffer || readFileSync(file.path);
+
+    await fileRef.save(fileDataForUpload, {
       metadata: {
         contentType: file.mimetype || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         metadata: {
@@ -587,33 +984,34 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
       // Continue - frontend will save it
     }
 
-    res.json({
-      success: true,
-      properties: processedProperties,
-      newStatusChanges,
-      metadata: {
-        filename: file.originalname,
-        uploadDate,
-        fileSize: file.size,
-        rowCount: processedProperties.length,
-        columns,
-        sampleRows,
-        totalRows,
-        statusChangesCount: newStatusChanges.length
-      },
-      storage: {
-        storagePath,
-        publicUrl: signedUrl
+    // Clean up temp file from disk storage
+    if (file.path && !file.buffer) {
+      try {
+        unlinkSync(file.path);
+        console.log('✅ Cleaned up temporary file');
+      } catch (cleanupError) {
+        console.warn('⚠️ Failed to clean up temp file:', cleanupError.message);
       }
-    });
+    }
+
+    console.log(`✅ Background processing complete: ${file.originalname}`);
+    console.log(`   - Processed ${processedProperties.length} properties`);
+    console.log(`   - Found ${newStatusChanges.length} status changes`);
+    
+    // Properties are saved to GCS, frontend can load them via /api/load-properties
   } catch (error) {
-    console.error('Process file error:', error);
-    res.status(500).json({ 
-      error: error.message || 'File processing failed',
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    // Clean up temp file on error
+    if (file?.path && !file?.buffer) {
+      try {
+        unlinkSync(file.path);
+      } catch (cleanupError) {
+        console.warn('⚠️ Failed to clean up temp file on error:', cleanupError.message);
+      }
+    }
+    console.error('Background processing error:', error);
+    throw error; // Re-throw for caller to handle
   }
-});
+}
 
 // Health check endpoint (must be before server starts)
 app.get('/health', (req, res) => {

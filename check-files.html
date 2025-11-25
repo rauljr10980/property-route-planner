@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Files - Page vs Cloud</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .file-item { padding: 10px; margin: 5px 0; background: #f5f5f5; border-radius: 3px; }
+        button { padding: 10px 20px; margin: 10px 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>File Comparison: Page vs Cloud</h1>
+    
+    <div class="section">
+        <h2>Files on Page (localStorage)</h2>
+        <button onclick="checkPageFiles()">Check Page Files</button>
+        <div id="pageFiles"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Files in Cloud (Google Cloud Storage)</h2>
+        <button onclick="checkCloudFiles()">Check Cloud Files</button>
+        <div id="cloudFiles"></div>
+    </div>
+    
+    <div class="section">
+        <h2>Comparison</h2>
+        <button onclick="compareFiles()">Compare</button>
+        <div id="comparison"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://gcs-api-server-989612961740.us-central1.run.app';
+        
+        async function checkPageFiles() {
+            const div = document.getElementById('pageFiles');
+            div.innerHTML = 'Loading...';
+            
+            try {
+                const savedHistory = localStorage.getItem('property-tax-file-history');
+                if (!savedHistory) {
+                    div.innerHTML = '<p class="error">No files in localStorage</p>';
+                    return;
+                }
+                
+                const files = JSON.parse(savedHistory);
+                div.innerHTML = `<p class="success">Found ${files.length} files in localStorage:</p>`;
+                files.forEach(file => {
+                    div.innerHTML += `
+                        <div class="file-item">
+                            <strong>${file.filename}</strong><br>
+                            Date: ${file.uploadDate}<br>
+                            Size: ${(file.fileSize / 1024).toFixed(2)} KB<br>
+                            Storage Path: ${file.storagePath || 'N/A'}
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                div.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function checkCloudFiles() {
+            const div = document.getElementById('cloudFiles');
+            div.innerHTML = 'Loading...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/list`);
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText || response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Handle error response
+                if (data.error) {
+                    div.innerHTML = `<p class="error">Backend Error: ${data.error}</p>`;
+                    return;
+                }
+                
+                const files = Array.isArray(data) ? data : [];
+                
+                if (!Array.isArray(files)) {
+                    div.innerHTML = `<p class="error">Unexpected response format: ${JSON.stringify(data)}</p>`;
+                    return;
+                }
+                
+                div.innerHTML = `<p class="success">Found ${files.length} files in Google Cloud Storage:</p>`;
+                if (files.length === 0) {
+                    div.innerHTML += '<p>No files found in cloud storage</p>';
+                    return;
+                }
+                
+                files.forEach(file => {
+                    div.innerHTML += `
+                        <div class="file-item">
+                            <strong>${file.name || 'Unknown'}</strong><br>
+                            Size: ${file.size ? (file.size / 1024).toFixed(2) + ' KB' : 'Unknown'}<br>
+                            Created: ${file.timeCreated || 'Unknown'}<br>
+                            URL: ${file.url || 'N/A'}
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                div.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                console.error('Cloud files error:', error);
+            }
+        }
+        
+        async function compareFiles() {
+            const div = document.getElementById('comparison');
+            div.innerHTML = 'Comparing...';
+            
+            try {
+                // Get page files
+                const savedHistory = localStorage.getItem('property-tax-file-history');
+                const pageFiles = savedHistory ? JSON.parse(savedHistory) : [];
+                
+                // Get cloud files
+                const response = await fetch(`${API_URL}/api/list`);
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+                    throw new Error(`Failed to fetch cloud files: ${errorData.error || response.status}`);
+                }
+                const data = await response.json();
+                
+                // Handle error response
+                if (data.error) {
+                    throw new Error(`Backend Error: ${data.error}`);
+                }
+                
+                const cloudFiles = Array.isArray(data) ? data : [];
+                
+                if (!Array.isArray(cloudFiles)) {
+                    throw new Error(`Unexpected response format: ${JSON.stringify(data)}`);
+                }
+                
+                div.innerHTML = `
+                    <h3>Summary</h3>
+                    <p><strong>Files on Page:</strong> ${pageFiles.length}</p>
+                    <p><strong>Files in Cloud:</strong> ${cloudFiles.length}</p>
+                    
+                    <h3>Files Only on Page (not in cloud):</h3>
+                    <div id="onlyPage"></div>
+                    
+                    <h3>Files Only in Cloud (not on page):</h3>
+                    <div id="onlyCloud"></div>
+                    
+                    <h3>Files in Both:</h3>
+                    <div id="both"></div>
+                `;
+                
+                // Compare
+                const pagePaths = new Set(pageFiles.map(f => f.storagePath || f.id));
+                const cloudPaths = new Set(cloudFiles.map(f => `files/${f.name}`));
+                
+                const onlyPage = pageFiles.filter(f => {
+                    const path = f.storagePath || f.id;
+                    return !cloudPaths.has(path);
+                });
+                
+                const onlyCloud = cloudFiles.filter(f => {
+                    const path = `files/${f.name}`;
+                    return !pagePaths.has(path);
+                });
+                
+                const both = pageFiles.filter(f => {
+                    const path = f.storagePath || f.id;
+                    return cloudPaths.has(path);
+                });
+                
+                document.getElementById('onlyPage').innerHTML = onlyPage.length > 0 
+                    ? onlyPage.map(f => `<div class="file-item">${f.filename}</div>`).join('')
+                    : '<p>None</p>';
+                    
+                document.getElementById('onlyCloud').innerHTML = onlyCloud.length > 0
+                    ? onlyCloud.map(f => `<div class="file-item">${f.name}</div>`).join('')
+                    : '<p>None</p>';
+                    
+                document.getElementById('both').innerHTML = both.length > 0
+                    ? both.map(f => `<div class="file-item">${f.filename}</div>`).join('')
+                    : '<p>None</p>';
+                    
+            } catch (error) {
+                div.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
+

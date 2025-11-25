@@ -142,18 +142,82 @@ export default function FileHistory() {
         }
       );
 
-      const mergedProperties = result.properties;
-      const newStatusChanges = result.newStatusChanges;
-      const rowCount = result.metadata.rowCount;
-      const columns = result.metadata.columns;
-      const sampleRows = result.metadata.sampleRows;
-      const storagePath = result.storage.storagePath;
-      const publicUrl = result.storage.publicUrl;
+      // Check if processing is happening in background
+      if (result.status === 'processing') {
+        setProcessingProgress({ progress: 50, message: 'File uploaded. Processing in background...' });
+        
+        // Poll for completion (check every 2 seconds, max 30 times = 1 minute)
+        let pollCount = 0;
+        const maxPolls = 30;
+        const pollInterval = setInterval(async () => {
+          pollCount++;
+          try {
+            const loadedData = await gcsStorage.loadProperties();
+            if (loadedData.properties && loadedData.properties.length > 0) {
+              clearInterval(pollInterval);
+              setProcessingProgress({ progress: 100, message: 'Processing complete!' });
+              
+              // Load the processed data
+              const mergedProperties = loadedData.properties || [];
+              await saveSharedProperties(mergedProperties, uploadDate);
+              
+              // Trigger properties update event
+              window.dispatchEvent(new CustomEvent('propertiesUpdated', { 
+                detail: { properties: mergedProperties } 
+              }));
+              
+              // Show success
+              alert(`File processed successfully! ${mergedProperties.length} properties loaded.`);
+              setProcessingProgress(null);
+            } else if (pollCount >= maxPolls) {
+              clearInterval(pollInterval);
+              setProcessingProgress({ progress: 100, message: 'Processing may still be in progress. Please refresh in a moment.' });
+              alert('File is being processed. Please wait a moment and refresh the page.');
+            }
+          } catch (error) {
+            if (pollCount >= maxPolls) {
+              clearInterval(pollInterval);
+              setProcessingProgress(null);
+              console.warn('Processing still in progress or failed:', error);
+            }
+          }
+        }, 2000);
+        
+        return; // Exit early, polling will handle the rest
+      }
 
-      setProcessingProgress({ progress: 95, message: 'Saving processed data...' });
+      // Backend now returns only status changes, not all properties (performance optimization)
+      const newStatusChanges = result.newStatusChanges || [];
+      const rowCount = result.metadata?.rowCount || result.metadata?.propertiesCount || 0;
+      const columns = result.metadata?.columns || [];
+      const sampleRows = result.metadata?.sampleRows || [];
+      const storagePath = result.storage?.storagePath;
+      const publicUrl = result.storage?.publicUrl;
+
+      setProcessingProgress({ progress: 95, message: 'Loading processed properties...' });
+
+      // Backend saved properties to GCS, now load them
+      // This separates upload (fast) from data loading (can be done async)
+      let mergedProperties = [];
+      if (result.propertiesSaved) {
+        try {
+          const loadedData = await gcsStorage.loadProperties();
+          mergedProperties = loadedData.properties || [];
+        } catch (loadError) {
+          console.warn('Failed to load properties after processing:', loadError);
+          // If load fails, properties are still in GCS, frontend can load later
+        }
+      } else if (result.properties) {
+        // Fallback: if backend still returns properties (backward compatibility)
+        mergedProperties = result.properties;
+      }
+
+      setProcessingProgress({ progress: 98, message: 'Saving to local cache...' });
 
       // Save merged properties to shared storage (saves to both localStorage and GCS)
-      await saveSharedProperties(mergedProperties, uploadDate);
+      if (mergedProperties.length > 0) {
+        await saveSharedProperties(mergedProperties, uploadDate);
+      }
 
       // Convert file to base64 for storage in history (fallback)
       const fileData = await fileToBase64(file);
@@ -502,6 +566,7 @@ export default function FileHistory() {
                       title="Delete"
                     >
                       <Trash2 size={16} />
+                      Delete
                     </button>
                   </div>
                 </div>

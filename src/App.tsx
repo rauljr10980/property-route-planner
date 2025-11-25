@@ -5,6 +5,7 @@ import { LoadScript } from '@react-google-maps/api';
 import TaxTracker from './components/TaxTracker';
 import Dashboard from './components/Dashboard';
 import FileHistory from './components/FileHistory';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY';
 
@@ -258,11 +259,23 @@ export default function App() {
 
         {/* Tab Content */}
         <div className="w-full">
-          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'dashboard' && (
+            <ErrorBoundary>
+              <Dashboard />
+            </ErrorBoundary>
+          )}
           {/* Route Planner disabled for performance */}
           {/* {activeTab === 'route' && <RoutePlanner />} */}
-          {activeTab === 'tracker' && <TaxTracker />}
-          {activeTab === 'history' && <FileHistory />}
+          {activeTab === 'tracker' && (
+            <ErrorBoundary>
+              <TaxTracker />
+            </ErrorBoundary>
+          )}
+          {activeTab === 'history' && (
+            <ErrorBoundary>
+              <FileHistory />
+            </ErrorBoundary>
+          )}
         </div>
       </div>
     </LoadScript>
