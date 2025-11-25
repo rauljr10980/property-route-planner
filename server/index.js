@@ -317,36 +317,100 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
 
     console.log(`📊 Processing file: ${file.originalname} (${file.size} bytes)`);
 
-    // Read Excel file
-    const workbook = XLSX.read(file.buffer, { type: 'buffer' });
+    // Read Excel file - only read header row first to identify columns
+    const workbook = XLSX.read(file.buffer, { type: 'buffer', cellDates: false });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     
-    // Get total rows (approximate)
+    // Get header row to identify column titles
+    const headerRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    const headerRow = XLSX.utils.sheet_to_json(worksheet, { 
+      range: { s: { c: 0, r: 0 }, e: { c: headerRange.e.c, r: 0 } },
+      header: 1,
+      defval: null
+    })[0] || [];
+    
+    console.log('📋 Header row:', headerRow);
+    
+    // Map column titles to their positions (flexible matching)
+    const findColumnByTitle = (titles, headerRow) => {
+      for (let i = 0; i < headerRow.length; i++) {
+        const header = String(headerRow[i] || '').trim().toUpperCase();
+        for (const title of titles) {
+          if (header.includes(title.toUpperCase()) || title.toUpperCase().includes(header)) {
+            return i; // Return column index (0-based)
+          }
+        }
+      }
+      return -1;
+    };
+    
+    // Define column mappings - flexible title matching
+    // These will match columns by their header titles, not position
+    const columnMappings = {
+      CAN: findColumnByTitle(['CAN', 'ACCOUNT', 'ACCOUNT NUMBER', 'PARCEL', 'PARCEL NUMBER', 'PROPERTY ID', 'ID'], headerRow),
+      ADDRSTRING: findColumnByTitle(['ADDRSTRING', 'ADDRESS', 'STREET', 'STREET ADDRESS', 'ADDR', 'ADDRESS STRING'], headerRow),
+      ZIP_CODE: findColumnByTitle(['ZIP CODE', 'ZIP', 'ZIPCODE', 'POSTAL CODE', 'POSTAL', 'ZIP_CODE'], headerRow),
+      Pnumber: findColumnByTitle(['PNUMBER', 'P NUMBER', 'P_NUMBER', 'PARCEL NUMBER'], headerRow), // Column Q
+      PSTRNAME: findColumnByTitle(['PSTRNAME', 'PSTR NAME', 'PSTR_NAME', 'OWNER', 'OWNER NAME'], headerRow), // Column R
+      LEGALSTATUS: findColumnByTitle(['LEGALSTATUS', 'LEGAL STATUS', 'LEGAL_STATUS', 'STATUS', 'TAX STATUS'], headerRow), // Column AE
+      TOT_PERCAN: findColumnByTitle(['TOT_PERCAN', 'TOT PERCAN', 'TOTAL PERCENT', 'PERCENT', 'TAX PERCENT'], headerRow) // Column BE
+    };
+    
+    // Log all headers and mappings for debugging
+    console.log('📋 All column headers:', headerRow.map((h, i) => `${String.fromCharCode(65 + (i % 26))}${i >= 26 ? Math.floor(i/26) : ''}: ${h}`).join(', '));
+    console.log('📍 Column mappings found:', columnMappings);
+    
+    console.log('📍 Column mappings:', columnMappings);
+    
+    // Get total rows
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-    const totalRows = range.e.r + 1;
+    const totalRows = range.e.r;
     
     console.log(`📈 Total rows: ${totalRows}`);
-
-    // Convert to JSON in chunks for large files
-    const CHUNK_SIZE = 5000; // Process 5000 rows at a time
+    
+    // Only read the columns we need (much faster for large files)
+    const neededColumns = Object.values(columnMappings).filter(idx => idx >= 0);
     const jsonData = [];
     
-    // Process in chunks to avoid memory issues
-    for (let startRow = 0; startRow <= range.e.r; startRow += CHUNK_SIZE) {
+    // Process in chunks for large files
+    const CHUNK_SIZE = 10000; // Process 10,000 rows at a time
+    const headerMap = {}; // Map column index to field name
+    
+    // Build header map and validate required columns
+    const requiredColumns = ['CAN', 'ADDRSTRING', 'ZIP_CODE'];
+    const missingColumns = requiredColumns.filter(col => columnMappings[col] < 0);
+    
+    if (missingColumns.length > 0) {
+      return res.status(400).json({ 
+        error: `Missing required columns: ${missingColumns.join(', ')}. Found headers: ${headerRow.filter(h => h).join(', ')}` 
+      });
+    }
+    
+    // Process in chunks
+    for (let startRow = 1; startRow <= range.e.r; startRow += CHUNK_SIZE) {
       const endRow = Math.min(startRow + CHUNK_SIZE - 1, range.e.r);
-      const chunkRange = XLSX.utils.encode_range({
-        s: { c: 0, r: startRow },
-        e: { c: range.e.c, r: endRow }
-      });
       
-      const chunkSheet = XLSX.utils.sheet_to_json(worksheet, {
-        range: chunkRange,
-        defval: null
-      });
+      // Read only needed columns
+      const chunkData = [];
+      for (let row = startRow; row <= endRow; row++) {
+        const rowData = {};
+        Object.entries(columnMappings).forEach(([fieldName, colIndex]) => {
+          if (colIndex >= 0) {
+            const cellAddress = XLSX.utils.encode_cell({ c: colIndex, r: row });
+            const cell = worksheet[cellAddress];
+            rowData[fieldName] = cell ? (cell.v !== undefined ? cell.v : null) : null;
+          }
+        });
+        
+        // Only add row if it has at least CAN (required identifier)
+        if (rowData.CAN) {
+          chunkData.push(rowData);
+        }
+      }
       
-      jsonData.push(...chunkSheet);
-      console.log(`✅ Processed rows ${startRow + 1}-${endRow + 1} (${jsonData.length}/${totalRows})`);
+      jsonData.push(...chunkData);
+      console.log(`✅ Processed rows ${startRow}-${endRow} (${jsonData.length}/${totalRows})`);
     }
 
     if (jsonData.length === 0) {
@@ -368,6 +432,11 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
 
     // Helper functions (same as frontend)
     const getPropertyIdentifier = (property) => {
+      // Use CAN as primary identifier (from column E)
+      if (property.CAN) {
+        return String(property.CAN).trim();
+      }
+      // Fallback to other common identifiers
       const keys = ['Account Number', 'accountNumber', 'Account', 'account', 
                     'Parcel Number', 'parcelNumber', 'Parcel', 'parcel',
                     'Property ID', 'propertyId', 'ID', 'id'];
@@ -380,19 +449,24 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
     };
 
     const getPropertyStatus = (property) => {
-      const statusKeys = ['Status', 'Judgment Status', 'Tax Status', 'Foreclosure Status', 'status'];
+      // First check LEGALSTATUS column (Column AE)
+      if (property.LEGALSTATUS) {
+        const value = String(property.LEGALSTATUS).trim().toUpperCase();
+        // Check if it contains J, A, or P
+        if (value.includes('J') || value === 'JUDGMENT') return 'J';
+        if (value.includes('A') || value === 'ACTIVE') return 'A';
+        if (value.includes('P') || value === 'PENDING') return 'P';
+        // Return first letter if it's J, A, or P
+        if (value === 'J' || value === 'A' || value === 'P') return value;
+      }
+      // Fallback to other status columns
+      const statusKeys = ['Status', 'Judgment Status', 'Tax Status', 'Foreclosure Status', 'status', 'LEGALSTATUS'];
       for (const key of statusKeys) {
         if (property[key]) {
           const value = String(property[key]).trim().toUpperCase();
           if (value === 'J' || value === 'A' || value === 'P') {
             return value;
           }
-        }
-      }
-      for (const key in property) {
-        const value = String(property[key]).trim().toUpperCase();
-        if (value === 'J' || value === 'A' || value === 'P') {
-          return value;
         }
       }
       return null;
