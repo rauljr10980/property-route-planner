@@ -3,6 +3,7 @@ import { AlertCircle, TrendingUp, Map, Filter, TrendingDown, Minus, DollarSign, 
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { loadSharedProperties } from '../utils/sharedData';
+import { getPropertyStatus as getPropertyStatusUtil } from '../utils/fileProcessor';
 
 const mapContainerStyle = {
   width: '100%',
@@ -34,25 +35,9 @@ export default function Dashboard() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [geocodedProperties, setGeocodedProperties] = useState<Property[]>([]);
   
-  // Helper to get status from property
+  // Use shared utility function
   const getPropertyStatus = (prop: Property): string | null => {
-    if (prop.LEGALSTATUS) {
-      const value = String(prop.LEGALSTATUS).trim().toUpperCase();
-      if (value.includes('J') || value === 'JUDGMENT') return 'J';
-      if (value.includes('A') || value === 'ACTIVE') return 'A';
-      if (value.includes('P') || value === 'PENDING') return 'P';
-      if (value === 'J' || value === 'A' || value === 'P') return value;
-    }
-    const statusKeys = ['Status', 'Judgment Status', 'Tax Status', 'Foreclosure Status', 'currentStatus'];
-    for (const key of statusKeys) {
-      if (prop[key]) {
-        const value = String(prop[key]).trim().toUpperCase();
-        if (value === 'J' || value === 'A' || value === 'P') {
-          return value;
-        }
-      }
-    }
-    return null;
+    return getPropertyStatusUtil(prop);
   };
 
   useEffect(() => {
@@ -339,21 +324,21 @@ export default function Dashboard() {
                 <div className="text-3xl font-bold text-gray-900">{properties.length}</div>
               </div>
               <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
-                <div className="text-sm text-gray-600 mb-1">High Priority (70+)</div>
+                <div className="text-sm text-gray-600 mb-1">Judgment (J)</div>
                 <div className="text-3xl font-bold text-red-600">
-                  {properties.filter(p => (p.motivationScore || 0) >= 70).length}
+                  {properties.filter(p => getPropertyStatus(p) === 'J').length}
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
-                <div className="text-sm text-gray-600 mb-1">Total Balance Owed</div>
-                <div className="text-2xl font-bold text-gray-900">
-                  ${properties.reduce((sum, p) => sum + (parseFloat(String(p.currentBalance || p.totalOwed || 0))), 0).toLocaleString()}
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+                <div className="text-sm text-gray-600 mb-1">Active (A)</div>
+                <div className="text-3xl font-bold text-yellow-600">
+                  {properties.filter(p => getPropertyStatus(p) === 'A').length}
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
-                <div className="text-sm text-gray-600 mb-1">Avg Motivation Score</div>
-                <div className="text-3xl font-bold text-purple-600">
-                  {Math.round(properties.reduce((sum, p) => sum + (p.motivationScore || 0), 0) / properties.length)}
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                <div className="text-sm text-gray-600 mb-1">Pending (P)</div>
+                <div className="text-3xl font-bold text-blue-600">
+                  {properties.filter(p => getPropertyStatus(p) === 'P').length}
                 </div>
               </div>
             </div>

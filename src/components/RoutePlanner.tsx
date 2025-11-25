@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { MapPin, X, Navigation, AlertCircle, CheckCircle } from 'lucide-react';
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { loadSharedProperties, Property } from '../utils/sharedData';
+import { getPropertyStatus as getPropertyStatusUtil } from '../utils/fileProcessor';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY';
 
@@ -73,8 +74,8 @@ export default function RoutePlanner() {
         if (statusFilter.has('J') && statusFilter.has('A') && statusFilter.has('P')) {
           return true; // Show all
         }
-        const status = prop.currentStatus;
-        return status && statusFilter.has(status);
+        const status = prop.currentStatus || getPropertyStatusUtil(prop);
+        return status && statusFilter.has(status as 'J' | 'A' | 'P');
       });
       setFilteredProperties(filtered);
     }
@@ -258,9 +259,10 @@ export default function RoutePlanner() {
   const getStatusCounts = () => {
     const counts = { J: 0, A: 0, P: 0, total: properties.length };
     properties.forEach(prop => {
-      if (prop.currentStatus === 'J') counts.J++;
-      else if (prop.currentStatus === 'A') counts.A++;
-      else if (prop.currentStatus === 'P') counts.P++;
+      const status = prop.currentStatus || getPropertyStatusUtil(prop);
+      if (status === 'J') counts.J++;
+      else if (status === 'A') counts.A++;
+      else if (status === 'P') counts.P++;
     });
     return counts;
   };

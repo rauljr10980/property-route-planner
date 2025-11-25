@@ -4,6 +4,7 @@ import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
 import { loadSharedProperties, loadSharedPropertiesSync, Property as SharedProperty } from '../utils/sharedData';
+import { getPropertyStatus as getPropertyStatusUtil } from '../utils/fileProcessor';
 
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'YOUR_GOOGLE_MAPS_API_KEY';
 
@@ -249,17 +250,9 @@ export default function TaxTracker() {
     return { label: 'Very Low', color: 'bg-gray-100 text-gray-800 border-gray-300' };
   };
 
+  // Use shared utility function
   const getStatus = (property: Property): string | null => {
-    const statusKeys = ['Status', 'Judgment Status', 'Tax Status', 'Foreclosure Status'];
-    for (const key of statusKeys) {
-      if (property[key]) {
-        const value = String(property[key]).trim().toUpperCase();
-        if (value === 'J' || value === 'A' || value === 'P') {
-          return value;
-        }
-      }
-    }
-    return null;
+    return getPropertyStatusUtil(property);
   };
 
   const getStatusColor = (status: string): string => {
@@ -919,7 +912,11 @@ export default function TaxTracker() {
                         All Properties with New Status ({getStatusChanges().length})
                       </button>
                       {(['J', 'A', 'P'] as const).map((status) => {
-                        const count = getStatusChanges().filter(c => c.newStatus === status).length;
+                        // Count ALL properties with this status, not just status changes
+                        const count = properties.filter(p => {
+                          const propStatus = p.currentStatus || getStatus(p);
+                          return propStatus === status;
+                        }).length;
                         const isSelected = statusChangeFilter.has(status);
                         return (
                           <button

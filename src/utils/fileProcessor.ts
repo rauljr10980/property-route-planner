@@ -45,22 +45,25 @@ export function getPropertyIdentifier(property: any): string | null {
 
 // Extract status (J, A, P) from property
 export function getPropertyStatus(property: any): 'J' | 'A' | 'P' | null {
-  const statusKeys = ['Status', 'Judgment Status', 'Tax Status', 'Foreclosure Status', 'status'];
+  // First check LEGALSTATUS column (Column AE) - this is the primary status column
+  if (property.LEGALSTATUS) {
+    const value = String(property.LEGALSTATUS).trim().toUpperCase();
+    // Check if it contains J, A, or P
+    if (value.includes('J') || value === 'JUDGMENT') return 'J';
+    if (value.includes('A') || value === 'ACTIVE') return 'A';
+    if (value.includes('P') || value === 'PENDING') return 'P';
+    // Return first letter if it's J, A, or P
+    if (value === 'J' || value === 'A' || value === 'P') return value as 'J' | 'A' | 'P';
+  }
   
+  // Fallback to other status columns
+  const statusKeys = ['Status', 'Judgment Status', 'Tax Status', 'Foreclosure Status', 'currentStatus', 'status'];
   for (const key of statusKeys) {
     if (property[key]) {
       const value = String(property[key]).trim().toUpperCase();
       if (value === 'J' || value === 'A' || value === 'P') {
         return value as 'J' | 'A' | 'P';
       }
-    }
-  }
-  
-  // Check all keys for J, A, or P values
-  for (const key in property) {
-    const value = String(property[key]).trim().toUpperCase();
-    if (value === 'J' || value === 'A' || value === 'P') {
-      return value as 'J' | 'A' | 'P';
     }
   }
   
