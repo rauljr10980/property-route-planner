@@ -797,10 +797,49 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
           }
         });
         
-        // Only add row if it has at least CAN (required identifier)
-        if (rowData.CAN) {
-          chunkData.push(rowData);
+        // Validate row - filter out header/metadata rows
+        const canValue = rowData.CAN ? String(rowData.CAN).trim() : '';
+        
+        // Skip if CAN is empty
+        if (!canValue) continue;
+        
+        // Skip if CAN looks like a header/metadata row (contains descriptive text, is all caps header name, etc.)
+        const canLower = canValue.toLowerCase();
+        const isHeaderRow = 
+          canValue.length > 50 || // Too long to be a valid ID
+          canLower.includes('determines') ||
+          canLower.includes('report ordering') ||
+          canLower.includes('inside the system') ||
+          canLower.includes('rpt_order_seq') ||
+          canValue.toUpperCase() === 'RPT_ORDER_SEQ' ||
+          canValue.toUpperCase() === 'CAN' ||
+          canValue.toUpperCase() === 'ACCOUNT' ||
+          canValue.toUpperCase() === 'ACCOUNT NUMBER' ||
+          canValue.toUpperCase() === 'PROPERTY ID' ||
+          canValue.toUpperCase() === 'ID' ||
+          // Check if all values in the row are the same (indicates header row)
+          (Object.values(rowData).filter(v => v).length > 0 && 
+           new Set(Object.values(rowData).filter(v => v).map(v => String(v).trim())).size === 1);
+        
+        if (isHeaderRow) {
+          console.log(`⚠️ Skipping header/metadata row: CAN="${canValue}"`);
+          continue;
         }
+        
+        // Skip if CAN is not a valid identifier (should be numeric or alphanumeric, not descriptive text)
+        // Valid IDs are typically: numbers, alphanumeric codes, or short identifiers
+        // Allow numbers, alphanumeric with dashes/underscores, but reject long descriptive text
+        const isValidId = (
+          /^[0-9]+$/.test(canValue) || // Pure numbers
+          (/^[A-Z0-9\-_\.]+$/i.test(canValue) && canValue.length <= 20 && !canLower.includes(' ')) // Alphanumeric without spaces
+        );
+        
+        if (!isValidId) {
+          console.log(`⚠️ Skipping invalid ID row: CAN="${canValue}" (not a valid identifier format)`);
+          continue;
+        }
+        
+        chunkData.push(rowData);
       }
       
       jsonData.push(...chunkData);
