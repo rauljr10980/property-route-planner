@@ -842,14 +842,15 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     
     // Find the actual header row by searching for expected column names
     // Look for rows that contain "CAN", "LEGALSTATUS", "ADDRSTRING", etc.
+    // Start from row 1 (skip row 0 which is often descriptive text)
     let headerRowIndex = -1;
     let headerRow = [];
     const expectedHeaders = ['CAN', 'LEGALSTATUS', 'ADDRSTRING', 'ZIP', 'ACCOUNT', 'ADDRESS'];
     
     console.log(`🔍 Searching for header row in ${maxRows + 1} rows...`);
     
-    // Search from top to bottom for the row containing expected headers
-    for (let row = 0; row <= Math.min(maxRows, 20); row++) { // Check first 20 rows
+    // Search from row 1 to row 10 (skip row 0, check first 10 rows after that)
+    for (let row = 1; row <= Math.min(maxRows, 10); row++) {
       const testRow = XLSX.utils.sheet_to_json(worksheet, { 
         range: { s: { c: 0, r: row }, e: { c: maxCols, r: row } },
         header: 1,
@@ -866,17 +867,17 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       if (foundHeaders.length >= 3) {
         headerRowIndex = row;
         headerRow = testRow;
-        console.log(`✅ Found header row at index ${row} with headers: ${foundHeaders.join(', ')}`);
+        console.log(`✅ Found header row at index ${row} (row ${row + 1}) with headers: ${foundHeaders.join(', ')}`);
         break;
       }
     }
     
-    // Fallback to row 0 if no header found
+    // Fallback to row 1 if no header found (row 0 is usually descriptive)
     if (headerRowIndex < 0) {
-      console.log('⚠️ Header row not found, using row 0 as fallback');
-      headerRowIndex = 0;
+      console.log('⚠️ Header row not found in rows 1-10, using row 1 as fallback');
+      headerRowIndex = 1;
       headerRow = XLSX.utils.sheet_to_json(worksheet, { 
-        range: { s: { c: 0, r: 0 }, e: { c: maxCols, r: 0 } },
+        range: { s: { c: 0, r: 1 }, e: { c: maxCols, r: 1 } },
         header: 1,
         defval: null
       })[0] || [];
@@ -940,9 +941,11 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     }
     
     // Process in chunks - start from the row AFTER the header row
-    // Skip first 3 rows after header (they are test rows)
-    const dataStartRow = headerRowIndex + 1 + 3;
-    console.log(`📊 Starting data processing from row ${dataStartRow + 1} (skipped header row ${headerRowIndex + 1} and 3 test rows)`);
+    // Skip first 3 rows after header ONLY if header is at row 0 or 1 (to skip test rows)
+    // If header is at row 2 or later, those "test rows" are actually the header
+    const skipTestRows = headerRowIndex <= 1 ? 3 : 0;
+    const dataStartRow = headerRowIndex + 1 + skipTestRows;
+    console.log(`📊 Starting data processing from row ${dataStartRow + 1} (header at row ${headerRowIndex + 1}${skipTestRows > 0 ? `, skipping ${skipTestRows} test rows` : ''})`);
     for (let startRow = dataStartRow; startRow <= maxRows; startRow += CHUNK_SIZE) {
       const endRow = Math.min(startRow + CHUNK_SIZE - 1, maxRows);
       
