@@ -508,7 +508,7 @@ app.delete('/api/delete', async (req, res) => {
     console.log(`✅ Successfully deleted: ${storagePath}`);
 
     res.json({ success: true, message: 'File deleted successfully' });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Delete error:', error);
     res.status(500).json({ error: error.message || 'Delete failed' });
   }
