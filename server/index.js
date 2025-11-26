@@ -610,6 +610,59 @@ app.get('/api/load-properties', async (req, res) => {
   }
 });
 
+// Reprocess an existing file from GCS
+app.post('/api/reprocess-file', async (req, res) => {
+  try {
+    const { filename } = req.body;
+    
+    if (!filename) {
+      return res.status(400).json({ error: 'Filename is required' });
+    }
+    
+    // Find the file in GCS
+    const [files] = await bucket.getFiles({ prefix: 'files/' });
+    const fileToReprocess = files.find(f => f.name.includes(filename) || f.metadata?.metadata?.originalName === filename);
+    
+    if (!fileToReprocess) {
+      return res.status(404).json({ error: 'File not found in storage' });
+    }
+    
+    console.log(`🔄 Reprocessing file: ${fileToReprocess.name}`);
+    
+    // Download the file from GCS
+    const [fileBuffer] = await fileToReprocess.download();
+    
+    // Create a mock file object for processing
+    const mockFile = {
+      buffer: fileBuffer,
+      originalname: fileToReprocess.metadata?.metadata?.originalName || filename,
+      mimetype: fileToReprocess.metadata.contentType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      size: parseInt(fileToReprocess.metadata.size || '0')
+    };
+    
+    // Get existing properties (empty array for fresh processing)
+    const existingPropertiesJson = JSON.stringify([]);
+    const uploadDate = new Date().toISOString();
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    
+    // Process in background
+    processFileAsync(mockFile, existingPropertiesJson, uploadDate, ip).catch(error => {
+      console.error('❌ Background reprocessing error:', error);
+      console.error('Error stack:', error.stack);
+    });
+    
+    res.json({
+      success: true,
+      message: 'File reprocessing started in background...',
+      filename: mockFile.originalname,
+      status: 'processing'
+    });
+  } catch (error) {
+    console.error('Reprocess file error:', error);
+    res.status(500).json({ error: error.message || 'Failed to reprocess file' });
+  }
+});
+
 // Process Excel file server-side (for large files)
 app.post('/api/process-file', upload.single('file'), async (req, res) => {
   try {
