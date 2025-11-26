@@ -682,15 +682,42 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
         return res.status(400).json({ error: 'Invalid Excel file: No sheets found' });
       }
 
-      // Quick check for required columns in header row
+      // Quick check for required columns - find actual header row
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const headerRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-      const headerRow = XLSX.utils.sheet_to_json(worksheet, { 
-        range: { s: { c: 0, r: 0 }, e: { c: headerRange.e.c, r: 0 } },
-        header: 1,
-        defval: null
-      })[0] || [];
+      const fullRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      const maxCols = fullRange.e.c;
+      
+      // Find the actual header row by searching for expected column names
+      let headerRow = [];
+      const expectedHeaders = ['CAN', 'LEGALSTATUS', 'ADDRSTRING', 'ZIP', 'ACCOUNT', 'ADDRESS'];
+      
+      for (let row = 0; row <= Math.min(fullRange.e.r, 20); row++) {
+        const testRow = XLSX.utils.sheet_to_json(worksheet, { 
+          range: { s: { c: 0, r: row }, e: { c: maxCols, r: row } },
+          header: 1,
+          defval: null
+        })[0] || [];
+        
+        const rowValues = testRow.map(v => String(v || '').trim().toUpperCase());
+        const foundHeaders = expectedHeaders.filter(header => 
+          rowValues.some(val => val === header || val.includes(header) || header.includes(val))
+        );
+        
+        if (foundHeaders.length >= 3) {
+          headerRow = testRow;
+          break;
+        }
+      }
+      
+      // Fallback to row 0 if no header found
+      if (headerRow.length === 0) {
+        headerRow = XLSX.utils.sheet_to_json(worksheet, { 
+          range: { s: { c: 0, r: 0 }, e: { c: maxCols, r: 0 } },
+          header: 1,
+          defval: null
+        })[0] || [];
+      }
 
       const findColumnByTitle = (titles, headerRow) => {
         for (let i = 0; i < headerRow.length; i++) {
@@ -743,9 +770,11 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
 
     // Process file asynchronously (non-blocking)
     processFileAsync(file, existingPropertiesJson, uploadDate, ip).catch(error => {
-      console.error('Background processing error:', error);
-      // Store error in a way frontend can check (could use GCS or in-memory cache)
-      // For now, log it - frontend will poll and see no properties if processing failed
+      console.error('❌ Background processing error:', error);
+      console.error('Error stack:', error.stack);
+      // Log detailed error for debugging
+      // Frontend will poll and see no properties if processing failed
+      // Could store error status in GCS for frontend to check
     });
     
     return; // Exit early - processing continues in background
@@ -785,13 +814,52 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     
-    // Get header row to identify column titles
-    const headerRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-    const headerRow = XLSX.utils.sheet_to_json(worksheet, { 
-      range: { s: { c: 0, r: 0 }, e: { c: headerRange.e.c, r: 0 } },
-      header: 1,
-      defval: null
-    })[0] || [];
+    // Get the full range of the worksheet
+    const fullRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    const maxRows = fullRange.e.r;
+    const maxCols = fullRange.e.c;
+    
+    // Find the actual header row by searching for expected column names
+    // Look for rows that contain "CAN", "LEGALSTATUS", "ADDRSTRING", etc.
+    let headerRowIndex = -1;
+    let headerRow = [];
+    const expectedHeaders = ['CAN', 'LEGALSTATUS', 'ADDRSTRING', 'ZIP', 'ACCOUNT', 'ADDRESS'];
+    
+    console.log(`🔍 Searching for header row in ${maxRows + 1} rows...`);
+    
+    // Search from top to bottom for the row containing expected headers
+    for (let row = 0; row <= Math.min(maxRows, 20); row++) { // Check first 20 rows
+      const testRow = XLSX.utils.sheet_to_json(worksheet, { 
+        range: { s: { c: 0, r: row }, e: { c: maxCols, r: row } },
+        header: 1,
+        defval: null
+      })[0] || [];
+      
+      // Check if this row contains expected header names
+      const rowValues = testRow.map(v => String(v || '').trim().toUpperCase());
+      const foundHeaders = expectedHeaders.filter(header => 
+        rowValues.some(val => val === header || val.includes(header) || header.includes(val))
+      );
+      
+      // If we find at least 3 expected headers, this is likely the header row
+      if (foundHeaders.length >= 3) {
+        headerRowIndex = row;
+        headerRow = testRow;
+        console.log(`✅ Found header row at index ${row} with headers: ${foundHeaders.join(', ')}`);
+        break;
+      }
+    }
+    
+    // Fallback to row 0 if no header found
+    if (headerRowIndex < 0) {
+      console.log('⚠️ Header row not found, using row 0 as fallback');
+      headerRowIndex = 0;
+      headerRow = XLSX.utils.sheet_to_json(worksheet, { 
+        range: { s: { c: 0, r: 0 }, e: { c: maxCols, r: 0 } },
+        header: 1,
+        defval: null
+      })[0] || [];
+    }
     
     console.log('📋 Header row:', headerRow);
     
@@ -824,13 +892,11 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     console.log('📋 All column headers:', headerRow.map((h, i) => `${String.fromCharCode(65 + (i % 26))}${i >= 26 ? Math.floor(i/26) : ''}: ${h}`).join(', '));
     console.log('📍 Column mappings found:', columnMappings);
     
-    console.log('📍 Column mappings:', columnMappings);
+    // Get total rows (data rows = total rows - header row)
+    const totalRows = maxRows + 1; // Total rows including header
+    const dataRows = maxRows - headerRowIndex; // Rows after header
     
-    // Get total rows
-    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
-    const totalRows = range.e.r;
-    
-    console.log(`📈 Total rows: ${totalRows}`);
+    console.log(`📈 Total rows in sheet: ${totalRows}, Header at row ${headerRowIndex}, Data rows: ${dataRows}`);
     
     // Only read the columns we need (much faster for large files)
     const neededColumns = Object.values(columnMappings).filter(idx => idx >= 0);
@@ -852,9 +918,10 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
     }
     
-    // Process in chunks
-    for (let startRow = 1; startRow <= range.e.r; startRow += CHUNK_SIZE) {
-      const endRow = Math.min(startRow + CHUNK_SIZE - 1, range.e.r);
+    // Process in chunks - start from the row AFTER the header row
+    const dataStartRow = headerRowIndex + 1;
+    for (let startRow = dataStartRow; startRow <= maxRows; startRow += CHUNK_SIZE) {
+      const endRow = Math.min(startRow + CHUNK_SIZE - 1, maxRows);
       
       // Read only needed columns
       const chunkData = [];
@@ -914,11 +981,15 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       }
       
       jsonData.push(...chunkData);
-      console.log(`✅ Processed rows ${startRow}-${endRow} (${jsonData.length}/${totalRows})`);
+      if (chunkData.length > 0 || startRow === dataStartRow) {
+        console.log(`✅ Processed rows ${startRow}-${endRow}: ${chunkData.length} valid rows, ${jsonData.length} total so far`);
+      }
     }
+    
+    console.log(`📊 Row processing summary: ${jsonData.length} rows extracted from ${maxRows - headerRowIndex} data rows`);
 
     if (jsonData.length === 0) {
-      return res.status(400).json({ error: 'No data found in Excel file' });
+      throw new Error('No data found in Excel file after processing. Please check that the file contains valid data rows.');
     }
 
     // Extract metadata
@@ -1041,6 +1112,11 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     });
 
     console.log(`✅ Processing complete: ${processedProperties.length} properties, ${newStatusChanges.length} status changes`);
+    console.log(`📊 Data processing summary:`);
+    console.log(`   - Total rows in sheet: ${totalRows}`);
+    console.log(`   - Header row found at index: ${headerRowIndex}`);
+    console.log(`   - Data rows processed: ${jsonData.length}`);
+    console.log(`   - Valid properties after filtering: ${processedProperties.length}`);
 
     // Upload file to GCS
     const timestamp = Date.now();
