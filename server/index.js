@@ -841,47 +841,61 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     const maxCols = fullRange.e.c;
     
     // Find the actual header row by searching for expected column names
-    // Look for rows that contain "CAN", "LEGALSTATUS", "ADDRSTRING", etc.
-    // User confirmed headers are in row 3 (index 2), but we'll search to be sure
+    // User confirmed headers are in row 3 (index 2), so we'll check that first
     let headerRowIndex = -1;
     let headerRow = [];
     const expectedHeaders = ['CAN', 'LEGALSTATUS', 'ADDRSTRING', 'ZIP', 'ACCOUNT', 'ADDRESS'];
     
     console.log(`🔍 Searching for header row in ${maxRows + 1} rows...`);
+    console.log(`📍 User specified headers are in row 3 (index 2), checking that first...`);
     
-    // Search from row 1 to row 10 (skip row 0, check first 10 rows after that)
-    // User says headers are in row 3 (index 2), so we should find it
-    for (let row = 1; row <= Math.min(maxRows, 10); row++) {
-      const testRow = XLSX.utils.sheet_to_json(worksheet, { 
-        range: { s: { c: 0, r: row }, e: { c: maxCols, r: row } },
-        header: 1,
-        defval: null
-      })[0] || [];
-      
-      // Check if this row contains expected header names
-      const rowValues = testRow.map(v => String(v || '').trim().toUpperCase());
-      const foundHeaders = expectedHeaders.filter(header => 
-        rowValues.some(val => val === header || val.includes(header) || header.includes(val))
-      );
-      
-      // If we find at least 3 expected headers, this is likely the header row
-      if (foundHeaders.length >= 3) {
-        headerRowIndex = row;
-        headerRow = testRow;
-        console.log(`✅ Found header row at index ${row} (row ${row + 1}) with headers: ${foundHeaders.join(', ')}`);
-        break;
+    // First, check row 3 (index 2) as user specified
+    const row3 = XLSX.utils.sheet_to_json(worksheet, { 
+      range: { s: { c: 0, r: 2 }, e: { c: maxCols, r: 2 } },
+      header: 1,
+      defval: null
+    })[0] || [];
+    
+    const row3Values = row3.map(v => String(v || '').trim().toUpperCase());
+    const foundHeadersRow3 = expectedHeaders.filter(header => 
+      row3Values.some(val => val === header || val.includes(header) || header.includes(val))
+    );
+    
+    if (foundHeadersRow3.length >= 3) {
+      headerRowIndex = 2; // Row 3 (1-indexed) = index 2 (0-indexed)
+      headerRow = row3;
+      console.log(`✅ Found header row at index 2 (row 3) with headers: ${foundHeadersRow3.join(', ')}`);
+    } else {
+      // If row 3 doesn't have headers, search other rows
+      console.log(`⚠️ Row 3 doesn't contain expected headers, searching other rows...`);
+      for (let row = 1; row <= Math.min(maxRows, 10); row++) {
+        if (row === 2) continue; // Already checked row 3
+        
+        const testRow = XLSX.utils.sheet_to_json(worksheet, { 
+          range: { s: { c: 0, r: row }, e: { c: maxCols, r: row } },
+          header: 1,
+          defval: null
+        })[0] || [];
+        
+        const rowValues = testRow.map(v => String(v || '').trim().toUpperCase());
+        const foundHeaders = expectedHeaders.filter(header => 
+          rowValues.some(val => val === header || val.includes(header) || header.includes(val))
+        );
+        
+        if (foundHeaders.length >= 3) {
+          headerRowIndex = row;
+          headerRow = testRow;
+          console.log(`✅ Found header row at index ${row} (row ${row + 1}) with headers: ${foundHeaders.join(', ')}`);
+          break;
+        }
       }
     }
     
-    // Fallback: If not found but user says it's row 3, use row 2 (index 2 = row 3)
+    // Final fallback: Use row 3 (index 2) as user specified, even if headers not found
     if (headerRowIndex < 0) {
-      console.log('⚠️ Header row not found in search, using row 3 (index 2) as specified');
+      console.log('⚠️ Header row not found in search, using row 3 (index 2) as user specified');
       headerRowIndex = 2; // Row 3 (1-indexed) = index 2 (0-indexed)
-      headerRow = XLSX.utils.sheet_to_json(worksheet, { 
-        range: { s: { c: 0, r: 2 }, e: { c: maxCols, r: 2 } },
-        header: 1,
-        defval: null
-      })[0] || [];
+      headerRow = row3;
     }
     
     console.log('📋 Header row:', headerRow);
