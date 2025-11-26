@@ -152,6 +152,15 @@ export default function FileHistory() {
         const pollInterval = setInterval(async () => {
           pollCount++;
           try {
+            // Check for processing errors first
+            const errorStatus = await gcsStorage.checkProcessingError();
+            if (errorStatus.error) {
+              clearInterval(pollInterval);
+              setProcessingProgress(null);
+              alert(`❌ File processing failed: ${errorStatus.error}\n\nPlease check the file format and try again.`);
+              return;
+            }
+            
             const loadedData = await gcsStorage.loadProperties();
             if (loadedData.properties && loadedData.properties.length > 0) {
               clearInterval(pollInterval);
@@ -171,14 +180,22 @@ export default function FileHistory() {
               setProcessingProgress(null);
             } else if (pollCount >= maxPolls) {
               clearInterval(pollInterval);
-              setProcessingProgress({ progress: 100, message: 'Processing may still be in progress. Please refresh in a moment.' });
-              alert('File is being processed. Please wait a moment and refresh the page.');
+              // Check for error one more time
+              const finalErrorCheck = await gcsStorage.checkProcessingError();
+              if (finalErrorCheck.error) {
+                setProcessingProgress(null);
+                alert(`❌ File processing failed: ${finalErrorCheck.error}\n\nPlease check the file format and try again.`);
+              } else {
+                setProcessingProgress({ progress: 100, message: 'Processing may still be in progress. Please refresh in a moment.' });
+                alert('File is being processed. Please wait a moment and refresh the page.');
+              }
             }
           } catch (error) {
             if (pollCount >= maxPolls) {
               clearInterval(pollInterval);
               setProcessingProgress(null);
               console.warn('Processing still in progress or failed:', error);
+              alert(`Error checking processing status: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
           }
         }, 2000);

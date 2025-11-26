@@ -231,6 +231,21 @@ class GCSStorageService {
   }
 
   /**
+   * Check for processing errors
+   */
+  async checkProcessingError(): Promise<{ error: string | null; message?: string; stack?: string; timestamp?: string }> {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/processing-error`);
+      if (!response.ok) {
+        return { error: null };
+      }
+      return await response.json();
+    } catch (error: any) {
+      return { error: null };
+    }
+  }
+
+  /**
    * Load properties data from GCS
    */
   async loadProperties(): Promise<{ properties: any[]; uploadDate: string | null }> {

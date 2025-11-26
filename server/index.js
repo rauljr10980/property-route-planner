@@ -560,6 +560,27 @@ app.post('/api/save-properties', async (req, res) => {
   }
 });
 
+// Check processing error status
+app.get('/api/processing-error', async (req, res) => {
+  try {
+    const errorPath = 'data/processing-error.json';
+    const errorFileRef = bucket.file(errorPath);
+    const [exists] = await errorFileRef.exists();
+    
+    if (!exists) {
+      return res.json({ error: null });
+    }
+    
+    const [file] = await errorFileRef.download();
+    const errorData = JSON.parse(file.toString());
+    
+    res.json(errorData);
+  } catch (error) {
+    console.error('Error loading processing error:', error);
+    res.json({ error: null });
+  }
+});
+
 // Load properties data from GCS
 app.get('/api/load-properties', async (req, res) => {
   try {
@@ -758,6 +779,18 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
       });
     }
 
+    // Clear any previous error status
+    try {
+      const errorPath = 'data/processing-error.json';
+      const errorFileRef = bucket.file(errorPath);
+      const [errorExists] = await errorFileRef.exists();
+      if (errorExists) {
+        await errorFileRef.delete();
+      }
+    } catch (clearError) {
+      console.warn('Failed to clear previous error status:', clearError);
+    }
+    
     // Return immediately - process in background to avoid blocking
     // This makes the API responsive even for large files
     res.json({
@@ -769,12 +802,28 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
     });
 
     // Process file asynchronously (non-blocking)
-    processFileAsync(file, existingPropertiesJson, uploadDate, ip).catch(error => {
+    processFileAsync(file, existingPropertiesJson, uploadDate, ip).catch(async (error) => {
       console.error('❌ Background processing error:', error);
       console.error('Error stack:', error.stack);
-      // Log detailed error for debugging
-      // Frontend will poll and see no properties if processing failed
-      // Could store error status in GCS for frontend to check
+      
+      // Store error status in GCS so frontend can check it
+      try {
+        const errorPath = 'data/processing-error.json';
+        const errorFileRef = bucket.file(errorPath);
+        await errorFileRef.save(JSON.stringify({
+          error: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString(),
+          filename: file.originalname
+        }, null, 2), {
+          metadata: {
+            contentType: 'application/json'
+          }
+        });
+        console.log('✅ Error status saved to GCS for frontend to check');
+      } catch (saveError) {
+        console.error('Failed to save error status:', saveError);
+      }
     });
     
     return; // Exit early - processing continues in background
@@ -1132,7 +1181,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     console.log(`   - Total rows in sheet: ${totalRows}`);
     console.log(`   - Header row found at index: ${headerRowIndex}`);
     console.log(`   - Data rows processed: ${jsonData.length}`);
-    console.log(`   - Valid properties after filtering: ${processedProperties.length}`);
+    console.log(`   - Valid properties after filtering: ${finalProperties.length}`);
     console.log(`📊 Status detection summary:`);
     console.log(`   - Judgment (J): ${statusCounts.J}`);
     console.log(`   - Active (A): ${statusCounts.A}`);
@@ -1160,7 +1209,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         metadata: {
           originalName: file.originalname,
           uploadDate: uploadDate,
-          rowCount: processedProperties.length.toString(),
+          rowCount: finalProperties.length.toString(),
           columns: JSON.stringify(columns),
           sampleRows: JSON.stringify(sampleRows)
         }
@@ -1188,11 +1237,24 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
           contentType: 'application/json',
           metadata: {
             uploadDate: uploadDate,
-            propertyCount: processedProperties.length.toString()
+            propertyCount: finalProperties.length.toString()
           }
         }
       });
       console.log(`✅ Saved ${finalProperties.length} properties to GCS (replaced all old data with new file)`);
+      
+      // Clear any error status since processing succeeded
+      try {
+        const errorPath = 'data/processing-error.json';
+        const errorFileRef = bucket.file(errorPath);
+        const [errorExists] = await errorFileRef.exists();
+        if (errorExists) {
+          await errorFileRef.delete();
+          console.log('✅ Cleared processing error status');
+        }
+      } catch (clearError) {
+        console.warn('Failed to clear error status:', clearError);
+      }
     } catch (saveError) {
       console.warn('⚠️ Failed to save properties to GCS (will be saved by frontend):', saveError.message);
       // Continue - frontend will save it
