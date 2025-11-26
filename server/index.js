@@ -941,48 +941,41 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         const canValue = rowData.CAN ? String(rowData.CAN).trim() : '';
         
         // Skip if CAN is empty
-        if (!canValue) continue;
-        
-        // Skip if CAN looks like a header/metadata row (contains descriptive text, is all caps header name, etc.)
-        const canLower = canValue.toLowerCase();
-        const isHeaderRow = 
-          canValue.length > 50 || // Too long to be a valid ID
-          canLower.includes('determines') ||
-          canLower.includes('report ordering') ||
-          canLower.includes('inside the system') ||
-          canLower.includes('rpt_order_seq') ||
-          canValue.toUpperCase() === 'RPT_ORDER_SEQ' ||
-          canValue.toUpperCase() === 'CAN' ||
-          canValue.toUpperCase() === 'ACCOUNT' ||
-          canValue.toUpperCase() === 'ACCOUNT NUMBER' ||
-          canValue.toUpperCase() === 'PROPERTY ID' ||
-          canValue.toUpperCase() === 'ID' ||
-          // Check if all values in the row are the same (indicates header row)
-          (Object.values(rowData).filter(v => v).length > 0 && 
-           new Set(Object.values(rowData).filter(v => v).map(v => String(v).trim())).size === 1);
-        
-        if (isHeaderRow) {
-          console.log(`⚠️ Skipping header/metadata row: CAN="${canValue}"`);
+        if (!canValue) {
+          if (startRow === dataStartRow && row <= dataStartRow + 5) {
+            console.log(`⚠️ Row ${row + 1}: CAN is empty, skipping`);
+          }
           continue;
         }
         
-        // More lenient validation - accept most values that aren't obviously headers
-        // Only reject if it's clearly descriptive text or too long
-        const isValidId = (
-          canValue.length > 0 && // Not empty (already checked above)
-          canValue.length <= 100 && // Not too long (increased from 20)
-          !canLower.includes('determines') && // Not descriptive text
-          !canLower.includes('report ordering') &&
-          !canLower.includes('inside the system') &&
-          canValue.toUpperCase() !== 'CAN' && // Not header text
-          canValue.toUpperCase() !== 'ACCOUNT' &&
-          canValue.toUpperCase() !== 'ACCOUNT NUMBER'
-        );
+        // Very minimal header detection - only skip obvious header text
+        const canLower = canValue.toLowerCase();
+        const canUpper = canValue.toUpperCase();
+        const isHeaderRow = 
+          canUpper === 'CAN' ||
+          canUpper === 'ACCOUNT' ||
+          canUpper === 'ACCOUNT NUMBER' ||
+          canUpper === 'PROPERTY ID' ||
+          canUpper === 'ID' ||
+          canUpper === 'RPT_ORDER_SEQ' ||
+          canLower.includes('determines') ||
+          canLower.includes('report ordering') ||
+          canLower.includes('inside the system');
+        
+        if (isHeaderRow) {
+          if (startRow === dataStartRow && row <= dataStartRow + 5) {
+            console.log(`⚠️ Row ${row + 1}: Skipping header row: CAN="${canValue}"`);
+          }
+          continue;
+        }
+        
+        // Accept ANY non-empty CAN value that's not obviously a header
+        // This is very lenient - we'll accept almost anything
+        const isValidId = canValue.length > 0 && canValue.length <= 200; // Allow up to 200 chars
         
         if (!isValidId) {
-          // Only log first few skipped rows to avoid spam
-          if (startRow === dataStartRow && row <= dataStartRow + 10 && jsonData.length < 5) {
-            console.log(`⚠️ Row ${row + 1}: Skipping invalid ID row: CAN="${canValue.substring(0, 50)}"`);
+          if (startRow === dataStartRow && row <= dataStartRow + 5) {
+            console.log(`⚠️ Row ${row + 1}: CAN too long (>200 chars): "${canValue.substring(0, 50)}"`);
           }
           continue;
         }
