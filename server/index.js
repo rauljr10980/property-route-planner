@@ -560,27 +560,6 @@ app.post('/api/save-properties', async (req, res) => {
   }
 });
 
-// Check processing error status
-app.get('/api/processing-error', async (req, res) => {
-  try {
-    const errorPath = 'data/processing-error.json';
-    const errorFileRef = bucket.file(errorPath);
-    const [exists] = await errorFileRef.exists();
-    
-    if (!exists) {
-      return res.json({ error: null });
-    }
-    
-    const [file] = await errorFileRef.download();
-    const errorData = JSON.parse(file.toString());
-    
-    res.json(errorData);
-  } catch (error) {
-    console.error('Error loading processing error:', error);
-    res.json({ error: null });
-  }
-});
-
 // Load properties data from GCS
 app.get('/api/load-properties', async (req, res) => {
   try {
@@ -779,18 +758,6 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Clear any previous error status
-    try {
-      const errorPath = 'data/processing-error.json';
-      const errorFileRef = bucket.file(errorPath);
-      const [errorExists] = await errorFileRef.exists();
-      if (errorExists) {
-        await errorFileRef.delete();
-      }
-    } catch (clearError) {
-      console.warn('Failed to clear previous error status:', clearError);
-    }
-    
     // Return immediately - process in background to avoid blocking
     // This makes the API responsive even for large files
     res.json({
@@ -802,28 +769,12 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
     });
 
     // Process file asynchronously (non-blocking)
-    processFileAsync(file, existingPropertiesJson, uploadDate, ip).catch(async (error) => {
+    processFileAsync(file, existingPropertiesJson, uploadDate, ip).catch(error => {
       console.error('❌ Background processing error:', error);
       console.error('Error stack:', error.stack);
-      
-      // Store error status in GCS so frontend can check it
-      try {
-        const errorPath = 'data/processing-error.json';
-        const errorFileRef = bucket.file(errorPath);
-        await errorFileRef.save(JSON.stringify({
-          error: error.message,
-          stack: error.stack,
-          timestamp: new Date().toISOString(),
-          filename: file.originalname
-        }, null, 2), {
-          metadata: {
-            contentType: 'application/json'
-          }
-        });
-        console.log('✅ Error status saved to GCS for frontend to check');
-      } catch (saveError) {
-        console.error('Failed to save error status:', saveError);
-      }
+      // Log detailed error for debugging
+      // Frontend will poll and see no properties if processing failed
+      // Could store error status in GCS for frontend to check
     });
     
     return; // Exit early - processing continues in background
@@ -912,18 +863,6 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     
     console.log('📋 Header row:', headerRow);
     
-    // Log rows 1-3 for debugging (0-indexed, so rows 0, 1, 2)
-    console.log('\n🔍 DEBUG: Checking rows 1-3 (0-indexed: 0, 1, 2):');
-    for (let debugRow = 0; debugRow <= Math.min(2, maxRows); debugRow++) {
-      const debugRowData = XLSX.utils.sheet_to_json(worksheet, { 
-        range: { s: { c: 0, r: debugRow }, e: { c: Math.min(maxCols, 10), r: debugRow } },
-        header: 1,
-        defval: null
-      })[0] || [];
-      console.log(`   Row ${debugRow + 1} (index ${debugRow}):`, debugRowData.slice(0, 10).map(v => String(v || '').substring(0, 30)).join(' | '));
-    }
-    console.log(`   Header row detected at index: ${headerRowIndex} (row ${headerRowIndex + 1})\n`);
-    
     // Map column titles to their positions (flexible matching)
     const findColumnByTitle = (titles, headerRow) => {
       for (let i = 0; i < headerRow.length; i++) {
@@ -980,7 +919,9 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     }
     
     // Process in chunks - start from the row AFTER the header row
-    const dataStartRow = headerRowIndex + 1;
+    // Skip first 3 rows after header (they are test rows)
+    const dataStartRow = headerRowIndex + 1 + 3;
+    console.log(`📊 Starting data processing from row ${dataStartRow + 1} (skipped header row ${headerRowIndex + 1} and 3 test rows)`);
     for (let startRow = dataStartRow; startRow <= maxRows; startRow += CHUNK_SIZE) {
       const endRow = Math.min(startRow + CHUNK_SIZE - 1, maxRows);
       
@@ -1000,17 +941,12 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         const canValue = rowData.CAN ? String(rowData.CAN).trim() : '';
         
         // Skip if CAN is empty
-        if (!canValue) {
-          if (startRow === dataStartRow && row <= dataStartRow + 2) {
-            console.log(`⚠️ Row ${row + 1}: CAN is empty, skipping`);
-          }
-          continue;
-        }
+        if (!canValue) continue;
         
         // Skip if CAN looks like a header/metadata row (contains descriptive text, is all caps header name, etc.)
         const canLower = canValue.toLowerCase();
         const isHeaderRow = 
-          canValue.length > 100 || // Too long to be a valid ID (increased from 50)
+          canValue.length > 50 || // Too long to be a valid ID
           canLower.includes('determines') ||
           canLower.includes('report ordering') ||
           canLower.includes('inside the system') ||
@@ -1020,35 +956,27 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
           canValue.toUpperCase() === 'ACCOUNT' ||
           canValue.toUpperCase() === 'ACCOUNT NUMBER' ||
           canValue.toUpperCase() === 'PROPERTY ID' ||
-          canValue.toUpperCase() === 'ID';
+          canValue.toUpperCase() === 'ID' ||
+          // Check if all values in the row are the same (indicates header row)
+          (Object.values(rowData).filter(v => v).length > 0 && 
+           new Set(Object.values(rowData).filter(v => v).map(v => String(v).trim())).size === 1);
         
         if (isHeaderRow) {
-          if (startRow === dataStartRow && row <= dataStartRow + 2) {
-            console.log(`⚠️ Row ${row + 1}: Skipping header/metadata row: CAN="${canValue.substring(0, 50)}"`);
-          }
+          console.log(`⚠️ Skipping header/metadata row: CAN="${canValue}"`);
           continue;
         }
         
-        // More lenient ID validation - accept most non-empty values that aren't obviously headers
-        // Only reject if it's clearly descriptive text (has multiple words, very long, etc.)
+        // Skip if CAN is not a valid identifier (should be numeric or alphanumeric, not descriptive text)
+        // Valid IDs are typically: numbers, alphanumeric codes, or short identifiers
+        // Allow numbers, alphanumeric with dashes/underscores, but reject long descriptive text
         const isValidId = (
-          canValue.length > 0 && // Not empty (already checked above)
-          canValue.length <= 100 && // Not too long
-          !canLower.includes('determines') && // Not descriptive text
-          !canLower.includes('report ordering') &&
-          !canLower.includes('inside the system')
+          /^[0-9]+$/.test(canValue) || // Pure numbers
+          (/^[A-Z0-9\-_\.]+$/i.test(canValue) && canValue.length <= 20 && !canLower.includes(' ')) // Alphanumeric without spaces
         );
         
         if (!isValidId) {
-          if (startRow === dataStartRow && row <= dataStartRow + 2) {
-            console.log(`⚠️ Row ${row + 1}: Skipping invalid ID row: CAN="${canValue.substring(0, 50)}"`);
-          }
+          console.log(`⚠️ Skipping invalid ID row: CAN="${canValue}" (not a valid identifier format)`);
           continue;
-        }
-        
-        // Log first few valid rows for debugging
-        if (startRow === dataStartRow && row <= dataStartRow + 2 && jsonData.length < 3) {
-          console.log(`✅ Row ${row + 1}: Valid data row - CAN="${canValue}", ADDRSTRING="${String(rowData.ADDRSTRING || '').substring(0, 30)}", LEGALSTATUS="${rowData.LEGALSTATUS || ''}"`);
         }
         
         chunkData.push(rowData);
@@ -1206,7 +1134,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     console.log(`   - Total rows in sheet: ${totalRows}`);
     console.log(`   - Header row found at index: ${headerRowIndex}`);
     console.log(`   - Data rows processed: ${jsonData.length}`);
-    console.log(`   - Valid properties after filtering: ${finalProperties.length}`);
+    console.log(`   - Valid properties after filtering: ${processedProperties.length}`);
     console.log(`📊 Status detection summary:`);
     console.log(`   - Judgment (J): ${statusCounts.J}`);
     console.log(`   - Active (A): ${statusCounts.A}`);
@@ -1234,7 +1162,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         metadata: {
           originalName: file.originalname,
           uploadDate: uploadDate,
-          rowCount: finalProperties.length.toString(),
+          rowCount: processedProperties.length.toString(),
           columns: JSON.stringify(columns),
           sampleRows: JSON.stringify(sampleRows)
         }
@@ -1262,24 +1190,11 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
           contentType: 'application/json',
           metadata: {
             uploadDate: uploadDate,
-            propertyCount: finalProperties.length.toString()
+            propertyCount: processedProperties.length.toString()
           }
         }
       });
       console.log(`✅ Saved ${finalProperties.length} properties to GCS (replaced all old data with new file)`);
-      
-      // Clear any error status since processing succeeded
-      try {
-        const errorPath = 'data/processing-error.json';
-        const errorFileRef = bucket.file(errorPath);
-        const [errorExists] = await errorFileRef.exists();
-        if (errorExists) {
-          await errorFileRef.delete();
-          console.log('✅ Cleared processing error status');
-        }
-      } catch (clearError) {
-        console.warn('Failed to clear error status:', clearError);
-      }
     } catch (saveError) {
       console.warn('⚠️ Failed to save properties to GCS (will be saved by frontend):', saveError.message);
       // Continue - frontend will save it
