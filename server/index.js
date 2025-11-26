@@ -993,7 +993,18 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       ZIP_CODE: findColumnByTitle(['ZIPCODE', 'ZIP CODE', 'ZIP', 'ZIP_CODE', 'POSTAL CODE', 'POSTAL'], headerRow), // Note: ZIPCODE (no underscore) in file
       Pnumber: findColumnByTitle(['PNUMBER', 'P NUMBER', 'P_NUMBER', 'PARCEL NUMBER'], headerRow), // Column Q
       PSTRNAME: findColumnByTitle(['PSTRNAME', 'PSTR NAME', 'PSTR_NAME', 'OWNER', 'OWNER NAME'], headerRow), // Column R
-      LEGALSTATUS: findColumnByTitle(['LEGALSTATUS', 'LEGAL_STATUS', 'LEGAL STATUS'], headerRow), // Column EA (index 30) - don't match generic "STATUS"
+      LEGALSTATUS: (() => {
+        // User confirmed LEGALSTATUS is in column AE (index 30)
+        // First try to find it by name
+        const found = findColumnByTitle(['LEGALSTATUS', 'LEGAL_STATUS', 'LEGAL STATUS'], headerRow);
+        if (found >= 0) return found;
+        // If not found by name, use column AE (index 30) directly
+        if (headerRow.length > 30 && String(headerRow[30] || '').trim().toUpperCase() === 'LEGALSTATUS') {
+          return 30;
+        }
+        // Fallback: assume it's at index 30 (column AE) as user specified
+        return 30;
+      })(), // Column AE (index 30) - user confirmed
       TOT_PERCAN: findColumnByTitle(['TOT_PERCAN', 'TOT PERCAN', 'TOTAL PERCENT', 'PERCENT', 'TAX PERCENT'], headerRow) // Column EB
     };
     
