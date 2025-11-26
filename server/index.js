@@ -891,8 +891,17 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       for (let i = 0; i < headerRow.length; i++) {
         const header = String(headerRow[i] || '').trim().toUpperCase();
         for (const title of titles) {
-          if (header.includes(title.toUpperCase()) || title.toUpperCase().includes(header)) {
-            return i; // Return column index (0-based)
+          const titleUpper = title.toUpperCase();
+          // Exact match first
+          if (header === titleUpper) {
+            return i;
+          }
+          // Then check if header contains title or title contains header
+          if (header.includes(titleUpper) || titleUpper.includes(header)) {
+            // Make sure it's not a partial match that's too short (e.g., "A" matching "ADDRESS")
+            if (header.length >= 3 || titleUpper.length <= 2) {
+              return i;
+            }
           }
         }
       }
@@ -912,8 +921,20 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     };
     
     // Log all headers and mappings for debugging
-    console.log('📋 All column headers:', headerRow.map((h, i) => `${String.fromCharCode(65 + (i % 26))}${i >= 26 ? Math.floor(i/26) : ''}: ${h}`).join(', '));
+    console.log('📋 All column headers (first 30):', headerRow.slice(0, 30).map((h, i) => {
+      const colLetter = String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i/26) : '');
+      return `${colLetter}: ${h || '(empty)'}`;
+    }).join(', '));
     console.log('📍 Column mappings found:', columnMappings);
+    
+    // Validate column mappings - if all are the same index, something is wrong
+    const mappingIndices = Object.values(columnMappings).filter(idx => idx >= 0);
+    const uniqueIndices = new Set(mappingIndices);
+    if (uniqueIndices.size === 1 && mappingIndices.length > 1) {
+      console.error('⚠️ WARNING: All column mappings point to the same column index! This indicates the header row was not found correctly.');
+      console.error('   All mappings:', columnMappings);
+      console.error('   Header row values:', headerRow.slice(0, 20));
+    }
     
     // Get total rows (data rows = total rows - header row)
     const totalRows = maxRows + 1; // Total rows including header
