@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Home, History, Upload } from 'lucide-react';
+import { Menu, Home, History } from 'lucide-react';
 import { LoadScript } from '@react-google-maps/api';
 import PropertyDashboard from './components/PropertyDashboard';
 import FileHistory from './components/FileHistory';
@@ -20,10 +20,6 @@ export default function App() {
   const [mapsLoaded, setMapsLoaded] = useState(false);
 
 
-  const handleUploadClick = () => {
-    // Only switch to File History tab - upload happens there
-    setActiveTab('history');
-  };
 
   // Monitor Google Maps loading status (consolidated useEffect)
   useEffect(() => {
@@ -123,14 +119,6 @@ export default function App() {
               
               {/* Tab Navigation */}
               <nav className="flex gap-2">
-                <button
-                  onClick={handleUploadClick}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100"
-                  title="Go to File History tab to upload files"
-                >
-                  <Upload className="w-5 h-5" />
-                  <span className="font-medium">Upload File</span>
-                </button>
                 <button
                   onClick={() => setActiveTab('dashboard')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${

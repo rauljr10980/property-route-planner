@@ -137,6 +137,14 @@ export function loadSharedPropertiesSync(): SharedDataState {
 // Clear shared property data
 export async function clearSharedProperties(): Promise<void> {
   try {
+    // Clear GCS (cloud storage)
+    try {
+      // Save empty array to GCS to overwrite any existing data
+      await gcsStorage.saveProperties([], '');
+    } catch (gcsError) {
+      console.warn('Failed to clear GCS:', gcsError);
+    }
+    
     // Clear localStorage
     localStorage.removeItem(PROPERTIES_KEY);
     localStorage.removeItem(LAST_UPLOAD_KEY);

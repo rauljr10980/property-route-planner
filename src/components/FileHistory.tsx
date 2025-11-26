@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, AlertCircle, History, Trash2, Eye, X, Download, Search, Calendar, FileText, CheckCircle, TrendingUp } from 'lucide-react';
 import { Property } from '../utils/fileProcessor';
-import { saveSharedProperties, loadSharedProperties, loadSharedPropertiesSync } from '../utils/sharedData';
+import { saveSharedProperties, loadSharedProperties, loadSharedPropertiesSync, clearSharedProperties } from '../utils/sharedData';
 import gcsStorage from '../services/gcsStorage';
 
 interface FileHistoryEntry {
@@ -413,6 +413,27 @@ export default function FileHistory() {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
+  const handleClearAllData = async () => {
+    if (!confirm('Are you sure you want to clear all cached data? This will remove all properties from browser storage (IndexedDB and localStorage). Files in cloud storage will remain.')) {
+      return;
+    }
+
+    try {
+      await clearSharedProperties();
+      setSharedProperties([]);
+      setLastUploadDate(null);
+      alert('All cached data cleared successfully!');
+      
+      // Trigger properties update event
+      window.dispatchEvent(new CustomEvent('propertiesUpdated', { 
+        detail: { properties: [] } 
+      }));
+    } catch (error: any) {
+      console.error('Error clearing data:', error);
+      alert(`Failed to clear data: ${error.message || 'Unknown error'}`);
+    }
+  };
+
   const getFilteredFiles = (): FileHistoryEntry[] => {
     if (!searchTerm) return fileHistory;
     return fileHistory.filter(entry => 
@@ -454,6 +475,14 @@ export default function FileHistory() {
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
                 />
               </div>
+              <button
+                onClick={handleClearAllData}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold shadow-md"
+                title="Clear all cached data from browser storage"
+              >
+                <Trash2 size={18} />
+                Clear Cache
+              </button>
               <label className={`flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition font-semibold shadow-lg ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                 <Upload size={20} />
                 {loading ? 'Processing...' : 'Upload & Process File'}
