@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu, Home, History, Upload } from 'lucide-react';
 import { LoadScript } from '@react-google-maps/api';
 import PropertyDashboard from './components/PropertyDashboard';
@@ -16,47 +16,13 @@ type Tab = 'dashboard' | 'history';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('history'); // Default to File History tab
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [mapsError, setMapsError] = useState<string | null>(null);
   const [mapsLoaded, setMapsLoaded] = useState(false);
 
 
   const handleUploadClick = () => {
-    // Switch to File History tab first
+    // Only switch to File History tab - upload happens there
     setActiveTab('history');
-    
-    // Then trigger the file input in FileHistory component after a brief delay
-    setTimeout(() => {
-      const fileInput = document.getElementById('file-upload-input') as HTMLInputElement;
-      if (fileInput) {
-        fileInput.click();
-      } else {
-        // Fallback: use the ref input
-        fileInputRef.current?.click();
-      }
-    }, 100);
-  };
-
-  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Switch to File History tab to show upload progress
-    setActiveTab('history');
-    
-    // Forward the file to FileHistory component's input
-    setTimeout(() => {
-      const fileInput = document.getElementById('file-upload-input') as HTMLInputElement;
-      if (fileInput && e.target.files?.[0]) {
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(e.target.files[0]);
-        fileInput.files = dataTransfer.files;
-        const changeEvent = new Event('change', { bubbles: true });
-        fileInput.dispatchEvent(changeEvent);
-        
-        // Clear the header input
-        if (e.target) {
-          e.target.value = '';
-        }
-      }
-    }, 200);
   };
 
   // Monitor Google Maps loading status (consolidated useEffect)
@@ -155,28 +121,20 @@ export default function App() {
                 <h1 className="text-xl font-bold text-gray-900">Property Management Suite</h1>
               </div>
               
-              {/* Upload Button & Tab Navigation */}
-              <div className="flex items-center gap-4">
-                {/* Single Upload Button - Prominent - Always visible */}
+              {/* Tab Navigation */}
+              <nav className="flex gap-2">
                 <button
                   onClick={handleUploadClick}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-semibold shadow-md"
-                  title="Upload Excel file - All tabs will use this data"
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    activeTab === 'history'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                  title="Go to File History tab to upload files"
                 >
                   <Upload className="w-5 h-5" />
-                  <span>Upload File</span>
+                  <span className="font-medium">Upload File</span>
                 </button>
-                {/* Hidden input for file selection */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleFileSelected}
-                  className="hidden"
-                />
-                
-                {/* Tab Navigation */}
-                <nav className="flex gap-2">
                 <button
                   onClick={() => setActiveTab('dashboard')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
@@ -199,8 +157,7 @@ export default function App() {
                   <History className="w-5 h-5" />
                   <span className="font-medium">File History</span>
                 </button>
-                </nav>
-              </div>
+              </nav>
             </div>
           </div>
         </div>

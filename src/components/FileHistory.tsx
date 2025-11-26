@@ -260,7 +260,28 @@ export default function FileHistory() {
     } catch (error: any) {
       console.error('Error processing file:', error);
       setProcessingProgress(null);
-      alert(`Error processing file: ${error.message || 'Please ensure it\'s a valid Excel file.'}`);
+      
+      // Provide more specific error messages
+      let errorMessage = 'Error processing file';
+      if (error.message) {
+        if (error.message.includes('Missing required columns')) {
+          errorMessage = `File format error: ${error.message}\n\nRequired columns: CAN (or Account Number), ADDRSTRING (or Address), ZIP_CODE (or Zip Code)`;
+        } else if (error.message.includes('File size exceeds')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('quota exceeded')) {
+          errorMessage = error.message;
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          errorMessage = 'Network error: Could not connect to server. Please check your internet connection and try again.';
+        } else if (error.message.includes('Invalid Excel file')) {
+          errorMessage = error.message;
+        } else {
+          errorMessage = `Error: ${error.message}`;
+        }
+      } else {
+        errorMessage = 'Please ensure it\'s a valid Excel file (.xlsx or .xls format).';
+      }
+      
+      alert(errorMessage);
     } finally {
       setLoading(false);
       e.target.value = '';

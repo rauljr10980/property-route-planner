@@ -182,8 +182,13 @@ class GCSStorageService {
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: 'Processing failed' }));
-        throw new Error(error.error || error.message || 'Failed to process file');
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { message: `Server error: ${response.status} ${response.statusText}` };
+        }
+        throw new Error(errorData.error || errorData.message || 'Failed to process file');
       }
 
       onProgress?.(90, 'Finalizing...');

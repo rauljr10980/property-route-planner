@@ -663,6 +663,74 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'File is empty' });
     }
 
+    // Do basic file format validation before processing
+    // Read just the first few bytes to check if it's a valid Excel file
+    try {
+      const fileBuffer = file.buffer || readFileSync(file.path);
+      const workbook = XLSX.read(fileBuffer, { 
+        type: 'buffer',
+        cellDates: false,
+        dense: false,
+        sheetStubs: false,
+        sheetRows: 1 // Only read first row for validation
+      });
+      
+      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+        if (file.path && !file.buffer) {
+          try { unlinkSync(file.path); } catch (e) {}
+        }
+        return res.status(400).json({ error: 'Invalid Excel file: No sheets found' });
+      }
+
+      // Quick check for required columns in header row
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const headerRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      const headerRow = XLSX.utils.sheet_to_json(worksheet, { 
+        range: { s: { c: 0, r: 0 }, e: { c: headerRange.e.c, r: 0 } },
+        header: 1,
+        defval: null
+      })[0] || [];
+
+      const findColumnByTitle = (titles, headerRow) => {
+        for (let i = 0; i < headerRow.length; i++) {
+          const header = String(headerRow[i] || '').trim().toUpperCase();
+          for (const title of titles) {
+            if (header.includes(title.toUpperCase()) || title.toUpperCase().includes(header)) {
+              return i;
+            }
+          }
+        }
+        return -1;
+      };
+
+      const columnMappings = {
+        CAN: findColumnByTitle(['CAN', 'ACCOUNT', 'ACCOUNT NUMBER', 'PARCEL', 'PARCEL NUMBER', 'PROPERTY ID', 'ID'], headerRow),
+        ADDRSTRING: findColumnByTitle(['ADDRSTRING', 'ADDRESS', 'STREET', 'STREET ADDRESS', 'ADDR', 'ADDRESS STRING'], headerRow),
+        ZIP_CODE: findColumnByTitle(['ZIP CODE', 'ZIP', 'ZIPCODE', 'POSTAL CODE', 'POSTAL', 'ZIP_CODE'], headerRow)
+      };
+
+      const requiredColumns = ['CAN', 'ADDRSTRING', 'ZIP_CODE'];
+      const missingColumns = requiredColumns.filter(col => columnMappings[col] < 0);
+      
+      if (missingColumns.length > 0) {
+        if (file.path && !file.buffer) {
+          try { unlinkSync(file.path); } catch (e) {}
+        }
+        return res.status(400).json({ 
+          error: `Missing required columns: ${missingColumns.join(', ')}. Found headers: ${headerRow.filter(h => h).slice(0, 10).join(', ')}${headerRow.length > 10 ? '...' : ''}` 
+        });
+      }
+    } catch (validationError) {
+      if (file.path && !file.buffer) {
+        try { unlinkSync(file.path); } catch (e) {}
+      }
+      console.error('File validation error:', validationError);
+      return res.status(400).json({ 
+        error: `Invalid Excel file: ${validationError.message || 'Unable to read file. Please ensure it\'s a valid .xlsx or .xls file.'}` 
+      });
+    }
+
     // Return immediately - process in background to avoid blocking
     // This makes the API responsive even for large files
     res.json({
@@ -676,7 +744,8 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
     // Process file asynchronously (non-blocking)
     processFileAsync(file, existingPropertiesJson, uploadDate, ip).catch(error => {
       console.error('Background processing error:', error);
-      // Could store error status in GCS or send notification
+      // Store error in a way frontend can check (could use GCS or in-memory cache)
+      // For now, log it - frontend will poll and see no properties if processing failed
     });
     
     return; // Exit early - processing continues in background
@@ -772,13 +841,15 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     const headerMap = {}; // Map column index to field name
     
     // Build header map and validate required columns
+    // Note: This validation is already done before response is sent, but keeping for safety
     const requiredColumns = ['CAN', 'ADDRSTRING', 'ZIP_CODE'];
     const missingColumns = requiredColumns.filter(col => columnMappings[col] < 0);
     
     if (missingColumns.length > 0) {
-      return res.status(400).json({ 
-        error: `Missing required columns: ${missingColumns.join(', ')}. Found headers: ${headerRow.filter(h => h).join(', ')}` 
-      });
+      // This shouldn't happen since we validate before sending response
+      // But if it does, log error and don't save properties
+      console.error(`Missing required columns in background processing: ${missingColumns.join(', ')}`);
+      throw new Error(`Missing required columns: ${missingColumns.join(', ')}`);
     }
     
     // Process in chunks
