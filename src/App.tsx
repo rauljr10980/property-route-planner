@@ -125,11 +125,7 @@ export default function App() {
               <nav className="flex gap-2">
                 <button
                   onClick={handleUploadClick}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    activeTab === 'history'
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100"
                   title="Go to File History tab to upload files"
                 >
                   <Upload className="w-5 h-5" />
