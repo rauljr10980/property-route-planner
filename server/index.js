@@ -966,17 +966,30 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
           continue;
         }
         
-        // Skip if CAN is not a valid identifier (should be numeric or alphanumeric, not descriptive text)
-        // Valid IDs are typically: numbers, alphanumeric codes, or short identifiers
-        // Allow numbers, alphanumeric with dashes/underscores, but reject long descriptive text
+        // More lenient validation - accept most values that aren't obviously headers
+        // Only reject if it's clearly descriptive text or too long
         const isValidId = (
-          /^[0-9]+$/.test(canValue) || // Pure numbers
-          (/^[A-Z0-9\-_\.]+$/i.test(canValue) && canValue.length <= 20 && !canLower.includes(' ')) // Alphanumeric without spaces
+          canValue.length > 0 && // Not empty (already checked above)
+          canValue.length <= 100 && // Not too long (increased from 20)
+          !canLower.includes('determines') && // Not descriptive text
+          !canLower.includes('report ordering') &&
+          !canLower.includes('inside the system') &&
+          canValue.toUpperCase() !== 'CAN' && // Not header text
+          canValue.toUpperCase() !== 'ACCOUNT' &&
+          canValue.toUpperCase() !== 'ACCOUNT NUMBER'
         );
         
         if (!isValidId) {
-          console.log(`⚠️ Skipping invalid ID row: CAN="${canValue}" (not a valid identifier format)`);
+          // Only log first few skipped rows to avoid spam
+          if (startRow === dataStartRow && row <= dataStartRow + 10 && jsonData.length < 5) {
+            console.log(`⚠️ Row ${row + 1}: Skipping invalid ID row: CAN="${canValue.substring(0, 50)}"`);
+          }
           continue;
+        }
+        
+        // Log first few valid rows for debugging
+        if (startRow === dataStartRow && row <= dataStartRow + 10 && jsonData.length < 5) {
+          console.log(`✅ Row ${row + 1}: Valid data row - CAN="${canValue}", ADDRSTRING="${String(rowData.ADDRSTRING || '').substring(0, 40)}", LEGALSTATUS="${rowData.LEGALSTATUS || ''}"`);
         }
         
         chunkData.push(rowData);
@@ -991,6 +1004,28 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     console.log(`📊 Row processing summary: ${jsonData.length} rows extracted from ${maxRows - headerRowIndex} data rows`);
 
     if (jsonData.length === 0) {
+      // Log more details about why no data was found
+      console.error('❌ No data found after processing. Debug info:');
+      console.error(`   - Header row index: ${headerRowIndex}`);
+      console.error(`   - Data start row: ${dataStartRow}`);
+      console.error(`   - Max rows in sheet: ${maxRows}`);
+      console.error(`   - Total rows to process: ${maxRows - dataStartRow + 1}`);
+      console.error(`   - Column mappings: ${JSON.stringify(columnMappings)}`);
+      
+      // Try to read a few rows to see what's there
+      console.error('\n   Sample rows from data start:');
+      for (let sampleRow = dataStartRow; sampleRow <= Math.min(dataStartRow + 5, maxRows); sampleRow++) {
+        const sampleData = {};
+        Object.entries(columnMappings).forEach(([fieldName, colIndex]) => {
+          if (colIndex >= 0) {
+            const cellAddress = XLSX.utils.encode_cell({ c: colIndex, r: sampleRow });
+            const cell = worksheet[cellAddress];
+            sampleData[fieldName] = cell ? (cell.v !== undefined ? String(cell.v).substring(0, 30) : null) : null;
+          }
+        });
+        console.error(`   Row ${sampleRow + 1}:`, JSON.stringify(sampleData));
+      }
+      
       throw new Error('No data found in Excel file after processing. Please check that the file contains valid data rows.');
     }
 
