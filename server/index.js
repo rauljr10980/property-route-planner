@@ -955,24 +955,33 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     
     // Map column titles to their positions (flexible matching)
     const findColumnByTitle = (titles, headerRow) => {
+      // First pass: look for exact matches
       for (let i = 0; i < headerRow.length; i++) {
         const header = String(headerRow[i] || '').trim().toUpperCase();
         for (const title of titles) {
           const titleUpper = title.toUpperCase();
-          // Exact match first
           if (header === titleUpper) {
             return i;
           }
-          // Then check if header contains title or title contains header
+        }
+      }
+      // Second pass: look for partial matches (but prioritize longer, more specific matches)
+      let bestMatch = { index: -1, score: 0 };
+      for (let i = 0; i < headerRow.length; i++) {
+        const header = String(headerRow[i] || '').trim().toUpperCase();
+        for (const title of titles) {
+          const titleUpper = title.toUpperCase();
+          // Check if header contains title or title contains header
           if (header.includes(titleUpper) || titleUpper.includes(header)) {
-            // Make sure it's not a partial match that's too short (e.g., "A" matching "ADDRESS")
-            if (header.length >= 3 || titleUpper.length <= 2) {
-              return i;
+            // Score based on match length - prefer longer, more specific matches
+            const matchLength = Math.min(header.length, titleUpper.length);
+            if (matchLength > bestMatch.score) {
+              bestMatch = { index: i, score: matchLength };
             }
           }
         }
       }
-      return -1;
+      return bestMatch.index;
     };
     
     // Define column mappings - flexible title matching
@@ -984,7 +993,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       ZIP_CODE: findColumnByTitle(['ZIPCODE', 'ZIP CODE', 'ZIP', 'ZIP_CODE', 'POSTAL CODE', 'POSTAL'], headerRow), // Note: ZIPCODE (no underscore) in file
       Pnumber: findColumnByTitle(['PNUMBER', 'P NUMBER', 'P_NUMBER', 'PARCEL NUMBER'], headerRow), // Column Q
       PSTRNAME: findColumnByTitle(['PSTRNAME', 'PSTR NAME', 'PSTR_NAME', 'OWNER', 'OWNER NAME'], headerRow), // Column R
-      LEGALSTATUS: findColumnByTitle(['LEGALSTATUS', 'LEGAL STATUS', 'LEGAL_STATUS', 'STATUS', 'TAX STATUS'], headerRow), // Column EA (index 30)
+      LEGALSTATUS: findColumnByTitle(['LEGALSTATUS', 'LEGAL_STATUS', 'LEGAL STATUS'], headerRow), // Column EA (index 30) - don't match generic "STATUS"
       TOT_PERCAN: findColumnByTitle(['TOT_PERCAN', 'TOT PERCAN', 'TOTAL PERCENT', 'PERCENT', 'TAX PERCENT'], headerRow) // Column EB
     };
     
