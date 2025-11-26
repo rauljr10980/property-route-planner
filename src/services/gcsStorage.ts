@@ -120,7 +120,8 @@ class GCSStorageService {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete file');
+        const errorData = await response.json().catch(() => ({ error: 'Failed to delete file' }));
+        throw new Error(errorData.error || errorData.message || `Failed to delete file: ${response.status} ${response.statusText}`);
       }
     } catch (error: any) {
       console.error('Delete error:', error);
@@ -227,21 +228,6 @@ class GCSStorageService {
     } catch (error: any) {
       console.error('Save properties error:', error);
       throw new Error(error.message || 'Failed to save properties');
-    }
-  }
-
-  /**
-   * Check for processing errors
-   */
-  async checkProcessingError(): Promise<{ error: string | null; message?: string; stack?: string; timestamp?: string }> {
-    try {
-      const response = await fetch(`${this.apiUrl}/api/processing-error`);
-      if (!response.ok) {
-        return { error: null };
-      }
-      return await response.json();
-    } catch (error: any) {
-      return { error: null };
     }
   }
 

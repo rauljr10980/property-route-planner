@@ -494,11 +494,21 @@ app.delete('/api/delete', async (req, res) => {
       return res.status(400).json({ error: 'Path parameter required' });
     }
 
+    console.log(`🗑️ Deleting file: ${storagePath}`);
     const fileRef = bucket.file(storagePath);
-    await fileRef.delete();
+    
+    // Check if file exists first
+    const [exists] = await fileRef.exists();
+    if (!exists) {
+      console.log(`⚠️ File not found: ${storagePath}`);
+      return res.status(404).json({ error: 'File not found' });
+    }
 
-    res.json({ success: true });
-  } catch (error) {
+    await fileRef.delete();
+    console.log(`✅ Successfully deleted: ${storagePath}`);
+
+    res.json({ success: true, message: 'File deleted successfully' });
+  } catch (error: any) {
     console.error('Delete error:', error);
     res.status(500).json({ error: error.message || 'Delete failed' });
   }
