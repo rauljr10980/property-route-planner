@@ -560,6 +560,27 @@ app.post('/api/save-properties', async (req, res) => {
   }
 });
 
+// Check processing error status
+app.get('/api/processing-error', async (req, res) => {
+  try {
+    const errorPath = 'data/processing-error.json';
+    const errorFileRef = bucket.file(errorPath);
+    const [exists] = await errorFileRef.exists();
+    
+    if (!exists) {
+      return res.json({ error: null });
+    }
+    
+    const [file] = await errorFileRef.download();
+    const errorData = JSON.parse(file.toString());
+    
+    res.json(errorData);
+  } catch (error) {
+    console.error('Error loading processing error:', error);
+    res.json({ error: null });
+  }
+});
+
 // Load properties data from GCS
 app.get('/api/load-properties', async (req, res) => {
   try {
