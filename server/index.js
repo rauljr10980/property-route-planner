@@ -842,7 +842,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     
     // Find the actual header row by searching for expected column names
     // Look for rows that contain "CAN", "LEGALSTATUS", "ADDRSTRING", etc.
-    // Start from row 1 (skip row 0 which is often descriptive text)
+    // User confirmed headers are in row 3 (index 2), but we'll search to be sure
     let headerRowIndex = -1;
     let headerRow = [];
     const expectedHeaders = ['CAN', 'LEGALSTATUS', 'ADDRSTRING', 'ZIP', 'ACCOUNT', 'ADDRESS'];
@@ -850,6 +850,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     console.log(`🔍 Searching for header row in ${maxRows + 1} rows...`);
     
     // Search from row 1 to row 10 (skip row 0, check first 10 rows after that)
+    // User says headers are in row 3 (index 2), so we should find it
     for (let row = 1; row <= Math.min(maxRows, 10); row++) {
       const testRow = XLSX.utils.sheet_to_json(worksheet, { 
         range: { s: { c: 0, r: row }, e: { c: maxCols, r: row } },
@@ -872,12 +873,12 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       }
     }
     
-    // Fallback to row 1 if no header found (row 0 is usually descriptive)
+    // Fallback: If not found but user says it's row 3, use row 2 (index 2 = row 3)
     if (headerRowIndex < 0) {
-      console.log('⚠️ Header row not found in rows 1-10, using row 1 as fallback');
-      headerRowIndex = 1;
+      console.log('⚠️ Header row not found in search, using row 3 (index 2) as specified');
+      headerRowIndex = 2; // Row 3 (1-indexed) = index 2 (0-indexed)
       headerRow = XLSX.utils.sheet_to_json(worksheet, { 
-        range: { s: { c: 0, r: 1 }, e: { c: maxCols, r: 1 } },
+        range: { s: { c: 0, r: 2 }, e: { c: maxCols, r: 2 } },
         header: 1,
         defval: null
       })[0] || [];
@@ -941,11 +942,10 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     }
     
     // Process in chunks - start from the row AFTER the header row
-    // Skip first 3 rows after header ONLY if header is at row 0 or 1 (to skip test rows)
-    // If header is at row 2 or later, those "test rows" are actually the header
-    const skipTestRows = headerRowIndex <= 1 ? 3 : 0;
-    const dataStartRow = headerRowIndex + 1 + skipTestRows;
-    console.log(`📊 Starting data processing from row ${dataStartRow + 1} (header at row ${headerRowIndex + 1}${skipTestRows > 0 ? `, skipping ${skipTestRows} test rows` : ''})`);
+    // If header is at row 3 (index 2), rows 0, 1, 2 are test/descriptive rows
+    // So we start data processing immediately after the header (no need to skip more)
+    const dataStartRow = headerRowIndex + 1;
+    console.log(`📊 Starting data processing from row ${dataStartRow + 1} (header at row ${headerRowIndex + 1}, rows 0-${headerRowIndex} are test/descriptive rows)`);
     for (let startRow = dataStartRow; startRow <= maxRows; startRow += CHUNK_SIZE) {
       const endRow = Math.min(startRow + CHUNK_SIZE - 1, maxRows);
       
