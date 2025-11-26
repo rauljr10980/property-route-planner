@@ -58,7 +58,8 @@ export async function loadSharedProperties(): Promise<SharedDataState> {
     try {
       const gcsData = await gcsStorage.loadProperties();
       if (gcsData.properties.length > 0) {
-        // Update IndexedDB and localStorage with GCS data
+        console.log(`✅ Loaded ${gcsData.properties.length} properties from GCS`);
+        // Always update cache with GCS data (GCS is source of truth)
         if (isIndexedDBAvailable()) {
           try {
             await saveToIndexedDB(gcsData.properties, gcsData.uploadDate || '');
@@ -78,6 +79,22 @@ export async function loadSharedProperties(): Promise<SharedDataState> {
           properties: gcsData.properties,
           lastUploadDate: gcsData.uploadDate
         };
+      } else {
+        // GCS is empty - clear cache to avoid showing old data
+        console.log('⚠️ GCS is empty, clearing cache to avoid showing old data');
+        if (isIndexedDBAvailable()) {
+          try {
+            await clearIndexedDB();
+          } catch (e) {
+            console.warn('Failed to clear IndexedDB:', e);
+          }
+        }
+        try {
+          localStorage.removeItem(PROPERTIES_KEY);
+          localStorage.removeItem(LAST_UPLOAD_KEY);
+        } catch (e) {
+          console.warn('Failed to clear localStorage:', e);
+        }
       }
     } catch (gcsError) {
       console.log('GCS not available, trying IndexedDB:', gcsError);

@@ -1027,25 +1027,32 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       // First check LEGALSTATUS column (Column AE)
       if (property.LEGALSTATUS) {
         const value = String(property.LEGALSTATUS).trim().toUpperCase();
-        // Check if it contains J, A, or P
-        if (value.includes('J') || value === 'JUDGMENT') return 'J';
-        if (value.includes('A') || value === 'ACTIVE') return 'A';
-        if (value.includes('P') || value === 'PENDING') return 'P';
-        // Return first letter if it's J, A, or P
+        // More flexible matching - check for J, A, or P in various formats
+        if (value.includes('JUDGMENT') || value.startsWith('J') || value === 'J') return 'J';
+        if (value.includes('ACTIVE') || (value.startsWith('A') && value.length <= 10)) return 'A';
+        if (value.includes('PENDING') || value.startsWith('P') || value === 'P') return 'P';
+        // Check if it's exactly J, A, or P
         if (value === 'J' || value === 'A' || value === 'P') return value;
       }
       // Fallback to other status columns
-      const statusKeys = ['Status', 'Judgment Status', 'Tax Status', 'Foreclosure Status', 'status', 'LEGALSTATUS'];
+      const statusKeys = ['Status', 'Judgment Status', 'Tax Status', 'Foreclosure Status', 'status', 'LEGALSTATUS', 'currentStatus'];
       for (const key of statusKeys) {
         if (property[key]) {
           const value = String(property[key]).trim().toUpperCase();
-          if (value === 'J' || value === 'A' || value === 'P') {
-            return value;
+          if (value === 'J' || value === 'A' || value === 'P' || 
+              value.includes('JUDGMENT') || value.includes('ACTIVE') || value.includes('PENDING')) {
+            if (value.includes('JUDGMENT') || value.startsWith('J')) return 'J';
+            if (value.includes('ACTIVE') || value.startsWith('A')) return 'A';
+            if (value.includes('PENDING') || value.startsWith('P')) return 'P';
+            if (value === 'J' || value === 'A' || value === 'P') return value;
           }
         }
       }
       return null;
     };
+    
+    // Track status detection for debugging
+    let statusCounts = { J: 0, A: 0, P: 0, null: 0 };
 
     // Process properties and detect status changes
     const processedProperties = [];
@@ -1057,6 +1064,10 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       if (!identifier) return;
 
       const newStatus = getPropertyStatus(propData);
+      // Track status counts for debugging
+      if (newStatus) statusCounts[newStatus]++;
+      else statusCounts.null++;
+      
       const existingProperty = existingMap.get(identifier);
 
       let property = {
@@ -1110,13 +1121,29 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       processedProperties.push(property);
       processedIds.add(identifier);
     });
-
-    console.log(`✅ Processing complete: ${processedProperties.length} properties, ${newStatusChanges.length} status changes`);
+    
+    // IMPORTANT: Replace all properties with new file data, don't merge with old cached data
+    // The processedProperties array contains ALL properties from the new file
+    // This ensures the new file completely replaces old data, not merges with it
+    const finalProperties = processedProperties; // Use only new file's properties
+    
+    console.log(`✅ Processing complete: ${finalProperties.length} properties from new file, ${newStatusChanges.length} status changes`);
     console.log(`📊 Data processing summary:`);
     console.log(`   - Total rows in sheet: ${totalRows}`);
     console.log(`   - Header row found at index: ${headerRowIndex}`);
     console.log(`   - Data rows processed: ${jsonData.length}`);
     console.log(`   - Valid properties after filtering: ${processedProperties.length}`);
+    console.log(`📊 Status detection summary:`);
+    console.log(`   - Judgment (J): ${statusCounts.J}`);
+    console.log(`   - Active (A): ${statusCounts.A}`);
+    console.log(`   - Pending (P): ${statusCounts.P}`);
+    console.log(`   - No status (null): ${statusCounts.null}`);
+    
+    // Log sample LEGALSTATUS values for debugging
+    const sampleStatuses = jsonData.slice(0, 20).map(p => p.LEGALSTATUS).filter(s => s);
+    if (sampleStatuses.length > 0) {
+      console.log(`📋 Sample LEGALSTATUS values: ${[...new Set(sampleStatuses)].slice(0, 10).join(', ')}`);
+    }
 
     // Upload file to GCS
     const timestamp = Date.now();
@@ -1146,10 +1173,11 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     });
 
     // Save processed properties to GCS for persistence
+    // IMPORTANT: Replace all properties with new file data (don't merge with old cached data)
     const dataPath = 'data/properties.json';
     const dataFileRef = bucket.file(dataPath);
     const propertiesData = {
-      properties: processedProperties,
+      properties: finalProperties, // Use only new file's properties
       uploadDate: uploadDate,
       lastUpdated: new Date().toISOString()
     };
@@ -1164,7 +1192,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
           }
         }
       });
-      console.log(`✅ Saved ${processedProperties.length} properties to GCS for persistence`);
+      console.log(`✅ Saved ${finalProperties.length} properties to GCS (replaced all old data with new file)`);
     } catch (saveError) {
       console.warn('⚠️ Failed to save properties to GCS (will be saved by frontend):', saveError.message);
       // Continue - frontend will save it
@@ -1181,8 +1209,9 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     }
 
     console.log(`✅ Background processing complete: ${file.originalname}`);
-    console.log(`   - Processed ${processedProperties.length} properties`);
+    console.log(`   - Processed ${finalProperties.length} properties from new file`);
     console.log(`   - Found ${newStatusChanges.length} status changes`);
+    console.log(`   - Replaced all old data with new file data`);
     
     // Properties are saved to GCS, frontend can load them via /api/load-properties
   } catch (error) {
