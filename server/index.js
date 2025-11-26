@@ -912,6 +912,18 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     
     console.log('📋 Header row:', headerRow);
     
+    // Log rows 1-3 for debugging (0-indexed, so rows 0, 1, 2)
+    console.log('\n🔍 DEBUG: Checking rows 1-3 (0-indexed: 0, 1, 2):');
+    for (let debugRow = 0; debugRow <= Math.min(2, maxRows); debugRow++) {
+      const debugRowData = XLSX.utils.sheet_to_json(worksheet, { 
+        range: { s: { c: 0, r: debugRow }, e: { c: Math.min(maxCols, 10), r: debugRow } },
+        header: 1,
+        defval: null
+      })[0] || [];
+      console.log(`   Row ${debugRow + 1} (index ${debugRow}):`, debugRowData.slice(0, 10).map(v => String(v || '').substring(0, 30)).join(' | '));
+    }
+    console.log(`   Header row detected at index: ${headerRowIndex} (row ${headerRowIndex + 1})\n`);
+    
     // Map column titles to their positions (flexible matching)
     const findColumnByTitle = (titles, headerRow) => {
       for (let i = 0; i < headerRow.length; i++) {
