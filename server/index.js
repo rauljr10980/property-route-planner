@@ -1000,12 +1000,17 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         const canValue = rowData.CAN ? String(rowData.CAN).trim() : '';
         
         // Skip if CAN is empty
-        if (!canValue) continue;
+        if (!canValue) {
+          if (startRow === dataStartRow && row <= dataStartRow + 2) {
+            console.log(`⚠️ Row ${row + 1}: CAN is empty, skipping`);
+          }
+          continue;
+        }
         
         // Skip if CAN looks like a header/metadata row (contains descriptive text, is all caps header name, etc.)
         const canLower = canValue.toLowerCase();
         const isHeaderRow = 
-          canValue.length > 50 || // Too long to be a valid ID
+          canValue.length > 100 || // Too long to be a valid ID (increased from 50)
           canLower.includes('determines') ||
           canLower.includes('report ordering') ||
           canLower.includes('inside the system') ||
@@ -1015,27 +1020,35 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
           canValue.toUpperCase() === 'ACCOUNT' ||
           canValue.toUpperCase() === 'ACCOUNT NUMBER' ||
           canValue.toUpperCase() === 'PROPERTY ID' ||
-          canValue.toUpperCase() === 'ID' ||
-          // Check if all values in the row are the same (indicates header row)
-          (Object.values(rowData).filter(v => v).length > 0 && 
-           new Set(Object.values(rowData).filter(v => v).map(v => String(v).trim())).size === 1);
+          canValue.toUpperCase() === 'ID';
         
         if (isHeaderRow) {
-          console.log(`⚠️ Skipping header/metadata row: CAN="${canValue}"`);
+          if (startRow === dataStartRow && row <= dataStartRow + 2) {
+            console.log(`⚠️ Row ${row + 1}: Skipping header/metadata row: CAN="${canValue.substring(0, 50)}"`);
+          }
           continue;
         }
         
-        // Skip if CAN is not a valid identifier (should be numeric or alphanumeric, not descriptive text)
-        // Valid IDs are typically: numbers, alphanumeric codes, or short identifiers
-        // Allow numbers, alphanumeric with dashes/underscores, but reject long descriptive text
+        // More lenient ID validation - accept most non-empty values that aren't obviously headers
+        // Only reject if it's clearly descriptive text (has multiple words, very long, etc.)
         const isValidId = (
-          /^[0-9]+$/.test(canValue) || // Pure numbers
-          (/^[A-Z0-9\-_\.]+$/i.test(canValue) && canValue.length <= 20 && !canLower.includes(' ')) // Alphanumeric without spaces
+          canValue.length > 0 && // Not empty (already checked above)
+          canValue.length <= 100 && // Not too long
+          !canLower.includes('determines') && // Not descriptive text
+          !canLower.includes('report ordering') &&
+          !canLower.includes('inside the system')
         );
         
         if (!isValidId) {
-          console.log(`⚠️ Skipping invalid ID row: CAN="${canValue}" (not a valid identifier format)`);
+          if (startRow === dataStartRow && row <= dataStartRow + 2) {
+            console.log(`⚠️ Row ${row + 1}: Skipping invalid ID row: CAN="${canValue.substring(0, 50)}"`);
+          }
           continue;
+        }
+        
+        // Log first few valid rows for debugging
+        if (startRow === dataStartRow && row <= dataStartRow + 2 && jsonData.length < 3) {
+          console.log(`✅ Row ${row + 1}: Valid data row - CAN="${canValue}", ADDRSTRING="${String(rowData.ADDRSTRING || '').substring(0, 30)}", LEGALSTATUS="${rowData.LEGALSTATUS || ''}"`);
         }
         
         chunkData.push(rowData);
