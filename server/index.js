@@ -977,14 +977,15 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     
     // Define column mappings - flexible title matching
     // These will match columns by their header titles, not position
+    // Based on actual file: CAN=E, ADDRSTRING=H, ZIPCODE=I, LEGALSTATUS=EA
     const columnMappings = {
       CAN: findColumnByTitle(['CAN', 'ACCOUNT', 'ACCOUNT NUMBER', 'PARCEL', 'PARCEL NUMBER', 'PROPERTY ID', 'ID'], headerRow),
       ADDRSTRING: findColumnByTitle(['ADDRSTRING', 'ADDRESS', 'STREET', 'STREET ADDRESS', 'ADDR', 'ADDRESS STRING'], headerRow),
-      ZIP_CODE: findColumnByTitle(['ZIP CODE', 'ZIP', 'ZIPCODE', 'POSTAL CODE', 'POSTAL', 'ZIP_CODE'], headerRow),
+      ZIP_CODE: findColumnByTitle(['ZIPCODE', 'ZIP CODE', 'ZIP', 'ZIP_CODE', 'POSTAL CODE', 'POSTAL'], headerRow), // Note: ZIPCODE (no underscore) in file
       Pnumber: findColumnByTitle(['PNUMBER', 'P NUMBER', 'P_NUMBER', 'PARCEL NUMBER'], headerRow), // Column Q
       PSTRNAME: findColumnByTitle(['PSTRNAME', 'PSTR NAME', 'PSTR_NAME', 'OWNER', 'OWNER NAME'], headerRow), // Column R
-      LEGALSTATUS: findColumnByTitle(['LEGALSTATUS', 'LEGAL STATUS', 'LEGAL_STATUS', 'STATUS', 'TAX STATUS'], headerRow), // Column AE
-      TOT_PERCAN: findColumnByTitle(['TOT_PERCAN', 'TOT PERCAN', 'TOTAL PERCENT', 'PERCENT', 'TAX PERCENT'], headerRow) // Column BE
+      LEGALSTATUS: findColumnByTitle(['LEGALSTATUS', 'LEGAL STATUS', 'LEGAL_STATUS', 'STATUS', 'TAX STATUS'], headerRow), // Column EA (index 30)
+      TOT_PERCAN: findColumnByTitle(['TOT_PERCAN', 'TOT PERCAN', 'TOTAL PERCENT', 'PERCENT', 'TAX PERCENT'], headerRow) // Column EB
     };
     
     // Log all headers and mappings for debugging
@@ -1019,6 +1020,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     
     // Build header map and validate required columns
     // Note: This validation is already done before response is sent, but keeping for safety
+    // ZIP_CODE mapping will work for both "ZIPCODE" and "ZIP_CODE" column names
     const requiredColumns = ['CAN', 'ADDRSTRING', 'ZIP_CODE'];
     const missingColumns = requiredColumns.filter(col => columnMappings[col] < 0);
     
