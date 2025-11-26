@@ -63,7 +63,7 @@ const DAILY_QUOTA_WINDOW = 24 * 60 * 60 * 1000; // 24 hours
 const COST_LIMITS = {
   // File processing is expensive (CPU, memory, GCS operations)
   PROCESS_FILE_PER_DAY: 10,        // Max 10 file uploads per day per IP
-  PROCESS_FILE_PER_HOUR: 3,        // Max 3 file uploads per hour per IP
+  PROCESS_FILE_PER_HOUR: 20,       // Max 20 file uploads per hour per IP (increased for testing)
   PROCESS_FILE_SIZE_MB: 20,         // Max 20MB per file (reduced from 50MB)
   
   // Status-related API calls
