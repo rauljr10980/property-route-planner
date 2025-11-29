@@ -4,6 +4,7 @@ import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { loadSharedProperties } from '../utils/sharedData';
 import { getPropertyStatus as getPropertyStatusUtil } from '../utils/fileProcessor';
+import gcsStorage from '../services/gcsStorage';
 
 const mapContainerStyle = {
   width: '100%',
@@ -36,7 +37,9 @@ export default function PropertyDashboard() {
   const [trendFilter, setTrendFilter] = useState<'all' | 'increasing' | 'stable' | 'decreasing'>('all');
   const [statusFilter, setStatusFilter] = useState<Set<'J' | 'A' | 'P'>>(new Set(['J', 'A', 'P']));
   const [statusChangeFilter, setStatusChangeFilter] = useState<Set<'J' | 'A' | 'P'>>(new Set(['J', 'A', 'P']));
+  const [transitionFilter, setTransitionFilter] = useState<string | null>(null); // 'blank-to-p', 'p-to-a', 'a-to-j', 'j-to-deleted'
   const [showStatusChanges, setShowStatusChanges] = useState(true);
+  const [deadLeads, setDeadLeads] = useState<any[]>([]); // Properties that were J and got removed
   const [mapCenter, setMapCenter] = useState({ lat: 29.4241, lng: -98.4936 });
   const [mapZoom, setMapZoom] = useState(11);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -73,6 +76,17 @@ export default function PropertyDashboard() {
       const { properties: sharedProps } = await loadSharedProperties();
       setProperties(sharedProps);
       console.log(`✅ Property Dashboard loaded ${sharedProps.length} properties`);
+      
+      // Load comparison report to get dead leads (J to deleted)
+      try {
+        const comparisonResult = await gcsStorage.loadComparisonReport();
+        if (comparisonResult && comparisonResult.report && comparisonResult.report.foreclosedProperties) {
+          setDeadLeads(comparisonResult.report.foreclosedProperties);
+          console.log(`✅ Loaded ${comparisonResult.report.foreclosedProperties.length} dead leads from comparison report`);
+        }
+      } catch (error) {
+        console.log('No comparison report available:', error);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -196,8 +210,28 @@ export default function PropertyDashboard() {
   const getFilteredStatusChanges = () => {
     let allChanges = getStatusChanges();
     
-    // Filter by new status (J, A, P)
-    if (statusChangeFilter.size < 3) {
+    // Filter by transition type (Blank→P, P→A, A→J, J→Deleted)
+    if (transitionFilter) {
+      allChanges = allChanges.filter(c => {
+        const transition = `${c.oldStatus} → ${c.newStatus}`.toLowerCase();
+        switch (transitionFilter) {
+          case 'blank-to-p':
+            return c.oldStatus === 'Blank' && c.newStatus === 'P';
+          case 'p-to-a':
+            return c.oldStatus === 'P' && c.newStatus === 'A';
+          case 'a-to-j':
+            return c.oldStatus === 'A' && c.newStatus === 'J';
+          case 'j-to-deleted':
+            // This will be handled separately with deadLeads
+            return false;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    // Filter by new status (J, A, P) - only if transition filter is not active
+    if (!transitionFilter && statusChangeFilter.size < 3) {
       allChanges = allChanges.filter(c => {
         if (!c.newStatus || c.newStatus === 'Blank') return false;
         return statusChangeFilter.has(c.newStatus as 'J' | 'A' | 'P');
@@ -519,7 +553,39 @@ export default function PropertyDashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                          {getFilteredStatusChanges().length === 0 ? (
+                          {transitionFilter === 'j-to-deleted' ? (
+                            // Show dead leads (J to deleted)
+                            deadLeads.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
+                                  No dead leads found (no Judgment properties were removed).
+                                </td>
+                              </tr>
+                            ) : (
+                              deadLeads.map((lead, idx) => (
+                                <tr key={idx} className="hover:bg-red-50">
+                                  <td className="px-3 py-2 text-xs text-gray-900">{lead.identifier || lead.CAN || 'N/A'}</td>
+                                  <td className="px-3 py-2">
+                                    <span className="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Judgment (J)</span>
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800">Deleted/New Owner</span>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-600">
+                                    <div className="space-y-1">
+                                      <div><strong>Address:</strong> {lead.address || 'N/A'}</div>
+                                      {lead.CAN && <div><strong>CAN:</strong> {lead.CAN}</div>}
+                                      <div className="text-red-600 font-semibold">⚠️ Foreclosed or New Owner - Lead No Longer Valid</div>
+                                    </div>
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-500">N/A</td>
+                                  <td className="px-3 py-2">
+                                    <span className="text-xs text-gray-400">N/A</span>
+                                  </td>
+                                </tr>
+                              ))
+                            )
+                          ) : getFilteredStatusChanges().length === 0 ? (
                             <tr>
                               <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
                                 No properties match the selected filters.
