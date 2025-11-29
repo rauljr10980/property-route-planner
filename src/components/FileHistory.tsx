@@ -25,17 +25,21 @@ export default function FileHistory() {
   const [sharedProperties, setSharedProperties] = useState<Property[]>([]);
   const [lastUploadDate, setLastUploadDate] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState<{ progress: number; message: string } | null>(null);
+  const [comparisonReport, setComparisonReport] = useState<any>(null);
+  const [showComparisonReport, setShowComparisonReport] = useState(false);
 
   useEffect(() => {
     const initialize = async () => {
       await loadFileHistory();
       await loadSharedData();
+      await loadComparisonReport();
     };
     initialize();
     
     // Listen for property updates
     const handlePropertiesUpdated = (event: CustomEvent) => {
       loadSharedData();
+      loadComparisonReport();
     };
     
     window.addEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
@@ -43,6 +47,17 @@ export default function FileHistory() {
       window.removeEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
     };
   }, []);
+
+  const loadComparisonReport = async () => {
+    try {
+      const result = await gcsStorage.loadComparisonReport();
+      if (result) {
+        setComparisonReport(result.report);
+      }
+    } catch (error) {
+      console.error('Error loading comparison report:', error);
+    }
+  };
 
   const loadSharedData = async () => {
     try {
@@ -219,6 +234,9 @@ export default function FileHistory() {
         await saveSharedProperties(mergedProperties, uploadDate);
       }
 
+      // Load comparison report after processing
+      await loadComparisonReport();
+
       // Convert file to base64 for storage in history (fallback)
       const fileData = await fileToBase64(file);
 
@@ -253,9 +271,9 @@ export default function FileHistory() {
           .map(([status, count]) => `${count} properties with ${status} status`)
           .join(', ');
         
-        alert(`File "${file.name}" processed successfully!\n\n${mergedProperties.length} total properties\n${newStatusChanges.length} status changes detected:\n${summaryText}\n\nCheck the Status Tracker tab to see details.`);
+        alert(`File "${file.name}" processed successfully!\n\n${mergedProperties.length} total properties\n${newStatusChanges.length} status changes detected:\n${summaryText}\n\nCheck the File Comparison Report above to see all changes (new, removed, and status changes).`);
       } else {
-        alert(`File "${file.name}" processed successfully!\n\n${mergedProperties.length} total properties\nNo status changes detected.`);
+        alert(`File "${file.name}" processed successfully!\n\n${mergedProperties.length} total properties\nNo status changes detected.\n\nCheck the File Comparison Report above to see all changes.`);
       }
     } catch (error: any) {
       console.error('Error processing file:', error);
@@ -545,9 +563,155 @@ export default function FileHistory() {
               </div>
             </div>
           </div>
-        </div>
+          </div>
 
-        {/* File List */}
+          {/* Comparison Report */}
+          {comparisonReport && (
+            <div className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="text-purple-600" size={24} />
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">File Comparison Report</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Changes detected between previous file and latest upload
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowComparisonReport(!showComparisonReport)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
+                >
+                  {showComparisonReport ? 'Hide' : 'Show'} Report
+                </button>
+              </div>
+
+              {showComparisonReport && (
+                <div className="space-y-4">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white p-4 rounded-lg border-2 border-green-300">
+                      <div className="text-green-600 font-semibold text-sm">New Properties</div>
+                      <div className="text-2xl font-bold text-green-900">
+                        {comparisonReport.summary.newPropertiesCount}
+                      </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border-2 border-red-300">
+                      <div className="text-red-600 font-semibold text-sm">Removed Properties</div>
+                      <div className="text-2xl font-bold text-red-900">
+                        {comparisonReport.summary.removedPropertiesCount}
+                      </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border-2 border-blue-300">
+                      <div className="text-blue-600 font-semibold text-sm">Status Changes</div>
+                      <div className="text-2xl font-bold text-blue-900">
+                        {comparisonReport.summary.statusChangesCount}
+                      </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border-2 border-gray-300">
+                      <div className="text-gray-600 font-semibold text-sm">Total in New File</div>
+                      <div className="text-2xl font-bold text-gray-900">
+                        {comparisonReport.summary.totalPropertiesInNewFile.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status Change Breakdown */}
+                  {comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && (
+                    <div className="bg-white rounded-lg border border-gray-200 p-4">
+                      <h4 className="font-bold text-gray-800 mb-3">Status Change Breakdown</h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                        {['P→A', 'P→J', 'A→J', 'A→P', 'J→A', 'J→P', 'NEW→J', 'NEW→A', 'NEW→P'].map(changeType => {
+                          const count = comparisonReport.statusChanges.filter((sc: any) => sc.changeType === changeType).length;
+                          if (count === 0) return null;
+                          return (
+                            <div key={changeType} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                              <span className="font-semibold text-gray-700">{changeType}:</span>
+                              <span className="font-bold text-gray-900">{count}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sample Changes */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* New Properties Sample */}
+                    {comparisonReport.newProperties && comparisonReport.newProperties.length > 0 && (
+                      <div className="bg-white rounded-lg border border-green-300 p-4">
+                        <h4 className="font-bold text-green-800 mb-2">New Properties (Sample)</h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {comparisonReport.newProperties.slice(0, 5).map((np: any, idx: number) => (
+                            <div key={idx} className="text-xs p-2 bg-green-50 rounded">
+                              <div className="font-semibold">CAN: {np.CAN || np.identifier}</div>
+                              <div className="text-gray-600 truncate">{np.address}</div>
+                              {np.status && (
+                                <div className="text-green-700 font-semibold">Status: {np.status}</div>
+                              )}
+                            </div>
+                          ))}
+                          {comparisonReport.newProperties.length > 5 && (
+                            <div className="text-xs text-gray-500 italic">
+                              +{comparisonReport.newProperties.length - 5} more...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Removed Properties Sample */}
+                    {comparisonReport.removedProperties && comparisonReport.removedProperties.length > 0 && (
+                      <div className="bg-white rounded-lg border border-red-300 p-4">
+                        <h4 className="font-bold text-red-800 mb-2">Removed Properties (Sample)</h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {comparisonReport.removedProperties.slice(0, 5).map((rp: any, idx: number) => (
+                            <div key={idx} className="text-xs p-2 bg-red-50 rounded">
+                              <div className="font-semibold">CAN: {rp.CAN || rp.identifier}</div>
+                              <div className="text-gray-600 truncate">{rp.address}</div>
+                              {rp.previousStatus && (
+                                <div className="text-red-700 font-semibold">Was: {rp.previousStatus}</div>
+                              )}
+                            </div>
+                          ))}
+                          {comparisonReport.removedProperties.length > 5 && (
+                            <div className="text-xs text-gray-500 italic">
+                              +{comparisonReport.removedProperties.length - 5} more...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Status Changes Sample */}
+                    {comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && (
+                      <div className="bg-white rounded-lg border border-blue-300 p-4">
+                        <h4 className="font-bold text-blue-800 mb-2">Status Changes (Sample)</h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {comparisonReport.statusChanges.slice(0, 5).map((sc: any, idx: number) => (
+                            <div key={idx} className="text-xs p-2 bg-blue-50 rounded">
+                              <div className="font-semibold">CAN: {sc.CAN || sc.identifier}</div>
+                              <div className="text-gray-600 truncate">{sc.address}</div>
+                              <div className="text-blue-700 font-semibold">
+                                {sc.oldStatus || 'NEW'} → {sc.newStatus}
+                              </div>
+                            </div>
+                          ))}
+                          {comparisonReport.statusChanges.length > 5 && (
+                            <div className="text-xs text-gray-500 italic">
+                              +{comparisonReport.statusChanges.length - 5} more...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* File List */}
         {filteredFiles.length > 0 ? (
           <div className="space-y-4">
             {filteredFiles.map((file) => (

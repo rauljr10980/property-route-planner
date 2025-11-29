@@ -253,6 +253,32 @@ class GCSStorageService {
       return { properties: [], uploadDate: null };
     }
   }
+
+  /**
+   * Load comparison report from GCS
+   */
+  async loadComparisonReport(): Promise<{ report: any; uploadDate: string | null } | null> {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/comparison-report`);
+
+      if (!response.ok) {
+        throw new Error('Failed to load comparison report');
+      }
+
+      const result = await response.json();
+      if (!result.report) {
+        return null;
+      }
+
+      return {
+        report: result.report,
+        uploadDate: result.uploadDate || null
+      };
+    } catch (error: any) {
+      console.error('Load comparison report error:', error);
+      return null;
+    }
+  }
 }
 
 export default new GCSStorageService();

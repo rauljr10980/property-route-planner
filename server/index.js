@@ -620,6 +620,40 @@ app.get('/api/load-properties', async (req, res) => {
   }
 });
 
+// Get comparison report
+app.get('/api/comparison-report', async (req, res) => {
+  try {
+    const reportPath = 'data/comparison-report.json';
+    const fileRef = bucket.file(reportPath);
+
+    const [exists] = await fileRef.exists();
+    
+    if (!exists) {
+      return res.json({ 
+        report: null,
+        message: 'No comparison report available. Upload a new file to generate a comparison report.'
+      });
+    }
+
+    const [file] = await fileRef.download();
+    const data = JSON.parse(file.toString());
+
+    console.log(`✅ Loaded comparison report from GCS`);
+
+    res.json({
+      report: data,
+      uploadDate: data.uploadDate || null
+    });
+  } catch (error) {
+    console.error('Load comparison report error:', error);
+    res.json({ 
+      report: null,
+      message: 'Failed to load comparison report',
+      error: error.message 
+    });
+  }
+});
+
 // Reprocess an existing file from GCS
 app.post('/api/reprocess-file', async (req, res) => {
   try {
@@ -1231,6 +1265,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     // Process properties and detect status changes
     const processedProperties = [];
     const newStatusChanges = [];
+    const newProperties = []; // Properties that didn't exist before
     const processedIds = new Set();
 
     jsonData.forEach((propData) => {
@@ -1271,7 +1306,9 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
             property,
             oldStatus,
             newStatus,
-            daysSinceChange
+            daysSinceChange,
+            identifier,
+            address: propData.ADDRSTRING || propData.address || 'N/A'
           });
         } else {
           // Status didn't change, keep existing status change date
@@ -1282,18 +1319,44 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
             daysSinceStatusChange: existingProperty.daysSinceStatusChange || 0
           };
         }
-      } else if (newStatus) {
-        // New property with status
-        newStatusChanges.push({
+      } else {
+        // New property (didn't exist in previous file)
+        newProperties.push({
           property,
-          oldStatus: null,
-          newStatus,
-          daysSinceChange: 0
+          identifier,
+          address: propData.ADDRSTRING || propData.address || 'N/A',
+          status: newStatus
         });
+        
+        if (newStatus) {
+          // New property with status
+          newStatusChanges.push({
+            property,
+            oldStatus: null,
+            newStatus,
+            daysSinceChange: 0,
+            identifier,
+            address: propData.ADDRSTRING || propData.address || 'N/A'
+          });
+        }
       }
 
       processedProperties.push(property);
       processedIds.add(identifier);
+    });
+    
+    // Find removed properties (existed in old file but not in new file)
+    const removedProperties = [];
+    existingProperties.forEach(prop => {
+      if (prop.id && !processedIds.has(prop.id)) {
+        removedProperties.push({
+          property: prop,
+          identifier: prop.id,
+          address: prop.ADDRSTRING || prop.address || 'N/A',
+          previousStatus: prop.currentStatus || null,
+          removedDate: uploadDate
+        });
+      }
     });
     
     // IMPORTANT: Replace all properties with new file data, don't merge with old cached data
@@ -1312,6 +1375,59 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     console.log(`   - Active (A): ${statusCounts.A}`);
     console.log(`   - Pending (P): ${statusCounts.P}`);
     console.log(`   - No status (null): ${statusCounts.null}`);
+    console.log(`📊 File comparison summary:`);
+    console.log(`   - New properties added: ${newProperties.length}`);
+    console.log(`   - Properties removed: ${removedProperties.length}`);
+    console.log(`   - Status changes: ${newStatusChanges.length}`);
+    
+    // Create comprehensive comparison report
+    const comparisonReport = {
+      uploadDate: uploadDate,
+      previousFileDate: existingProperties.length > 0 ? (existingProperties[0].statusChangeDate || null) : null,
+      summary: {
+        totalPropertiesInNewFile: finalProperties.length,
+        totalPropertiesInPreviousFile: existingProperties.length,
+        newPropertiesCount: newProperties.length,
+        removedPropertiesCount: removedProperties.length,
+        statusChangesCount: newStatusChanges.length
+      },
+      newProperties: newProperties.map(np => ({
+        identifier: np.identifier,
+        address: np.address,
+        status: np.status,
+        CAN: np.property.CAN || null
+      })),
+      removedProperties: removedProperties.map(rp => ({
+        identifier: rp.identifier,
+        address: rp.address,
+        previousStatus: rp.previousStatus,
+        CAN: rp.property.CAN || null
+      })),
+      statusChanges: newStatusChanges.map(sc => ({
+        identifier: sc.identifier,
+        address: sc.address,
+        oldStatus: sc.oldStatus,
+        newStatus: sc.newStatus,
+        CAN: sc.property.CAN || null,
+        changeType: sc.oldStatus === null ? 'NEW' : 
+                    sc.newStatus === null ? 'REMOVED_STATUS' :
+                    `${sc.oldStatus}→${sc.newStatus}`
+      }))
+    };
+    
+    // Log detailed status change breakdown
+    const statusChangeBreakdown = {
+      'P→A': newStatusChanges.filter(sc => sc.oldStatus === 'P' && sc.newStatus === 'A').length,
+      'P→J': newStatusChanges.filter(sc => sc.oldStatus === 'P' && sc.newStatus === 'J').length,
+      'A→J': newStatusChanges.filter(sc => sc.oldStatus === 'A' && sc.newStatus === 'J').length,
+      'A→P': newStatusChanges.filter(sc => sc.oldStatus === 'A' && sc.newStatus === 'P').length,
+      'J→A': newStatusChanges.filter(sc => sc.oldStatus === 'J' && sc.newStatus === 'A').length,
+      'J→P': newStatusChanges.filter(sc => sc.oldStatus === 'J' && sc.newStatus === 'P').length,
+      'NEW→J': newStatusChanges.filter(sc => sc.oldStatus === null && sc.newStatus === 'J').length,
+      'NEW→A': newStatusChanges.filter(sc => sc.oldStatus === null && sc.newStatus === 'A').length,
+      'NEW→P': newStatusChanges.filter(sc => sc.oldStatus === null && sc.newStatus === 'P').length
+    };
+    console.log(`📊 Status change breakdown:`, statusChangeBreakdown);
     
     // Log sample LEGALSTATUS values for debugging
     const sampleStatuses = jsonData.slice(0, 20).map(p => p.LEGALSTATUS).filter(s => s);
@@ -1367,6 +1483,20 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         }
       });
       console.log(`✅ Saved ${finalProperties.length} properties to GCS (replaced all old data with new file)`);
+      
+      // Save comparison report
+      const comparisonReportPath = 'data/comparison-report.json';
+      const comparisonReportRef = bucket.file(comparisonReportPath);
+      await comparisonReportRef.save(JSON.stringify(comparisonReport, null, 2), {
+        metadata: {
+          contentType: 'application/json',
+          metadata: {
+            uploadDate: uploadDate,
+            reportType: 'file-comparison'
+          }
+        }
+      });
+      console.log(`✅ Saved comparison report to GCS: ${comparisonReportPath}`);
     } catch (saveError) {
       console.warn('⚠️ Failed to save properties to GCS (will be saved by frontend):', saveError.message);
       // Continue - frontend will save it
