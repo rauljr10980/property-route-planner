@@ -363,58 +363,96 @@ export default function FileHistory() {
     setLoading(true);
     setProcessingProgress({ progress: 0, message: 'Loading file...' });
     try {
-      let file: File;
-      
-      setProcessingProgress({ progress: 20, message: 'Downloading file...' });
-      
-      if (entry.storagePath) {
-        // Download from Google Cloud Storage
-        const blob = await gcsStorage.downloadFile(entry.storagePath);
-        file = new File([blob], entry.filename, { 
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-        });
-      } else if (entry.fileData) {
-        // Fallback to base64 from localStorage
-        const response = await fetch(entry.fileData);
-        const blob = await response.blob();
-        file = new File([blob], entry.filename, { 
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-        });
-      } else {
-        alert('File data not available');
-        setLoading(false);
-        setProcessingProgress(null);
-        return;
-      }
-
       // Load existing properties (sync for immediate use)
       const { properties: existingProperties } = loadSharedPropertiesSync();
 
-      // Process using server-side processing (same as new uploads)
-      setProcessingProgress({ progress: 30, message: 'Processing file on server...' });
-      
-      const result = await gcsStorage.processFile(
-        file,
-        existingProperties,
-        entry.uploadDate,
-        (progress, message) => {
-          setProcessingProgress({ progress, message });
+      if (entry.storagePath) {
+        // Use reprocess endpoint (more efficient - no download needed)
+        setProcessingProgress({ progress: 10, message: 'Reprocessing file from cloud storage...' });
+        
+        const result = await gcsStorage.reprocessFile(
+          entry.storagePath,
+          existingProperties,
+          entry.uploadDate,
+          (progress, message) => {
+            setProcessingProgress({ progress, message });
+          }
+        );
+
+        // Wait for properties to be saved to GCS, then load them
+        setProcessingProgress({ progress: 90, message: 'Loading processed properties...' });
+        
+        // Poll for properties to be ready
+        let attempts = 0;
+        const maxAttempts = 60; // 5 minutes max
+        let mergedProperties = result.properties || [];
+        
+        while (mergedProperties.length === 0 && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+          const loadedData = await loadSharedProperties();
+          if (loadedData.properties.length > 0) {
+            mergedProperties = loadedData.properties;
+            break;
+          }
+          attempts++;
         }
-      );
 
-      const mergedProperties = result.properties;
-      const newStatusChanges = result.newStatusChanges;
+        // Save to shared storage
+        if (mergedProperties.length > 0) {
+          await saveSharedProperties(mergedProperties, entry.uploadDate);
+        }
 
-      // Save merged properties to shared storage (saves to both localStorage and GCS)
-      await saveSharedProperties(mergedProperties, entry.uploadDate);
+        // Load comparison report
+        await loadComparisonReport();
 
-      setProcessingProgress(null);
+        setProcessingProgress(null);
 
-      // Show status change summary
-      if (newStatusChanges.length > 0) {
-        alert(`File "${entry.filename}" reloaded and processed!\n\n${mergedProperties.length} total properties\n${newStatusChanges.length} status changes detected.`);
+        alert(`File "${entry.filename}" reprocessed successfully!\n\n${mergedProperties.length} total properties\n\nCheck the File Comparison Report to see all changes.`);
+      } else if (entry.fileData) {
+        // Fallback: download and process if no storagePath
+        setProcessingProgress({ progress: 20, message: 'Downloading file...' });
+        
+        const response = await fetch(entry.fileData);
+        const blob = await response.blob();
+        const file = new File([blob], entry.filename, { 
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        });
+
+        // Process using server-side processing
+        setProcessingProgress({ progress: 30, message: 'Processing file on server...' });
+        
+        const result = await gcsStorage.processFile(
+          file,
+          existingProperties,
+          entry.uploadDate,
+          (progress, message) => {
+            setProcessingProgress({ progress, message });
+          }
+        );
+
+        const mergedProperties = result.properties || [];
+        const newStatusChanges = result.newStatusChanges || [];
+
+        // Save merged properties to shared storage
+        if (mergedProperties.length > 0) {
+          await saveSharedProperties(mergedProperties, entry.uploadDate);
+        }
+
+        // Load comparison report
+        await loadComparisonReport();
+
+        setProcessingProgress(null);
+
+        if (newStatusChanges.length > 0) {
+          alert(`File "${entry.filename}" reloaded and processed!\n\n${mergedProperties.length} total properties\n${newStatusChanges.length} status changes detected.\n\nCheck the File Comparison Report to see all changes.`);
+        } else {
+          alert(`File "${entry.filename}" reloaded and processed!\n\n${mergedProperties.length} total properties\n\nCheck the File Comparison Report to see all changes.`);
+        }
       } else {
-        alert(`File "${entry.filename}" reloaded and processed!\n\n${mergedProperties.length} total properties`);
+        alert('File data not available. Please upload the file again.');
+        setLoading(false);
+        setProcessingProgress(null);
+        return;
       }
     } catch (error: any) {
       console.error('Error loading file:', error);

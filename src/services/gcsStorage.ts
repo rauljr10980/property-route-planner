@@ -279,6 +279,79 @@ class GCSStorageService {
       return null;
     }
   }
+
+  /**
+   * Reprocess an existing file from GCS (without downloading)
+   */
+  async reprocessFile(
+    storagePath: string,
+    existingProperties: any[],
+    uploadDate: string,
+    onProgress?: (progress: number, message: string) => void
+  ): Promise<{
+    properties?: any[];
+    newStatusChanges?: any[];
+    status?: 'processing' | 'complete';
+    message?: string;
+    filename?: string;
+  }> {
+    try {
+      onProgress?.(10, 'Reprocessing file from cloud storage...');
+
+      const response = await fetch(`${this.apiUrl}/api/reprocess-file`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          storagePath,
+          existingProperties,
+          uploadDate
+        })
+      });
+
+      if (!response.ok) {
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch {
+          errorData = { message: `Server error: ${response.status} ${response.statusText}` };
+        }
+        throw new Error(errorData.error || errorData.message || 'Failed to reprocess file');
+      }
+
+      onProgress?.(50, 'Processing in background...');
+
+      const result = await response.json();
+
+      // If processing is in background, poll for completion
+      if (result.status === 'processing') {
+        onProgress?.(70, 'Waiting for processing to complete...');
+        // Poll for properties to be ready
+        let attempts = 0;
+        const maxAttempts = 60; // 5 minutes max
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+          const loadedData = await this.loadProperties();
+          if (loadedData.properties.length > 0) {
+            onProgress?.(100, 'Complete!');
+            return {
+              properties: loadedData.properties,
+              status: 'complete',
+              filename: result.filename
+            };
+          }
+          attempts++;
+        }
+      }
+
+      onProgress?.(100, 'Complete!');
+      return result;
+    } catch (error: any) {
+      console.error('Reprocess file error:', error);
+      throw new Error(error.message || 'Failed to reprocess file');
+    }
+  }
 }
 
 export default new GCSStorageService();
