@@ -363,8 +363,15 @@ export default function FileHistory() {
     setLoading(true);
     setProcessingProgress({ progress: 0, message: 'Loading file...' });
     try {
-      // Load existing properties (sync for immediate use)
-      const { properties: existingProperties } = loadSharedPropertiesSync();
+      // Load existing properties from GCS first (source of truth for comparison)
+      // This ensures we compare against the actual last saved state, not just localStorage
+      setProcessingProgress({ progress: 5, message: 'Loading previous properties for comparison...' });
+      const { properties: existingPropertiesFromGCS } = await loadSharedProperties();
+      const existingProperties = existingPropertiesFromGCS.length > 0 
+        ? existingPropertiesFromGCS 
+        : loadSharedPropertiesSync().properties; // Fallback to localStorage if GCS is empty
+
+      console.log(`📊 Comparing against ${existingProperties.length} existing properties from ${existingPropertiesFromGCS.length > 0 ? 'GCS' : 'localStorage'}`);
 
       if (entry.storagePath) {
         // Use reprocess endpoint (more efficient - no download needed)
