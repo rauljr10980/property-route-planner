@@ -1395,15 +1395,25 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     
     // Find removed properties (existed in old file but not in new file)
     const removedProperties = [];
+    const foreclosedProperties = []; // Properties that were Judgment (J) and got removed (foreclosed/new owner - dead leads)
     existingProperties.forEach(prop => {
       if (prop.id && !processedIds.has(prop.id)) {
-        removedProperties.push({
+        const previousStatus = prop.currentStatus || null;
+        const removedProperty = {
           property: prop,
           identifier: prop.id,
           address: prop.ADDRSTRING || prop.address || 'N/A',
-          previousStatus: prop.currentStatus || null,
-          removedDate: uploadDate
-        });
+          previousStatus: previousStatus,
+          removedDate: uploadDate,
+          CAN: prop.CAN || null
+        };
+        
+        removedProperties.push(removedProperty);
+        
+        // If it was Judgment (J) and got removed, it's a foreclosed/new owner (dead lead)
+        if (previousStatus === 'J') {
+          foreclosedProperties.push(removedProperty);
+        }
       }
     });
     
@@ -1439,6 +1449,7 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         totalPropertiesInPreviousFile: existingProperties.length,
         newPropertiesCount: newProperties.length,
         removedPropertiesCount: removedProperties.length,
+        foreclosedPropertiesCount: foreclosedProperties.length, // Dead leads (were J, now removed)
         statusChangesCount: newStatusChanges.length,
         totPercanChangesCount: totPercanChanges.length,
         legalStatusChangesCount: legalStatusChanges.length
@@ -1453,7 +1464,15 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         identifier: rp.identifier,
         address: rp.address,
         previousStatus: rp.previousStatus,
-        CAN: rp.property.CAN || null
+        CAN: rp.CAN || null,
+        isForeclosed: rp.previousStatus === 'J' // Mark if it was Judgment (foreclosed/new owner - dead lead)
+      })),
+      foreclosedProperties: foreclosedProperties.map(fp => ({
+        identifier: fp.identifier,
+        address: fp.address,
+        previousStatus: fp.previousStatus,
+        CAN: fp.CAN || null,
+        reason: 'Foreclosed or New Owner - Lead No Longer Valid'
       })),
       statusChanges: newStatusChanges.map(sc => ({
         identifier: sc.identifier,

@@ -602,6 +602,9 @@ export default function FileHistory() {
                       {comparisonReport.summary?.legalStatusChangesCount !== undefined && (
                         <> • <strong>{comparisonReport.summary.legalStatusChangesCount || 0}</strong> properties with LEGALSTATUS field changes</>
                       )}
+                      {comparisonReport.summary?.foreclosedPropertiesCount > 0 && (
+                        <> • <strong className="text-red-700">{comparisonReport.summary.foreclosedPropertiesCount}</strong> <span className="text-red-700 font-semibold">DEAD LEADS</span> (were Judgment, now foreclosed/new owner)</>
+                      )}
                       {(!comparisonReport.summary || 
                         (comparisonReport.summary.statusChangesCount === 0 && 
                          (comparisonReport.summary.totPercanChangesCount || 0) === 0 && 
@@ -624,6 +627,11 @@ export default function FileHistory() {
                       <div className="text-2xl font-bold text-red-900">
                         {comparisonReport.summary.removedPropertiesCount}
                       </div>
+                      {comparisonReport.summary.foreclosedPropertiesCount > 0 && (
+                        <div className="text-xs text-red-700 mt-1 font-semibold">
+                          {comparisonReport.summary.foreclosedPropertiesCount} Dead Leads (Were Judgment)
+                        </div>
+                      )}
                     </div>
                     <div className="bg-white p-4 rounded-lg border-2 border-blue-300">
                       <div className="text-blue-600 font-semibold text-sm">Status Changes</div>
@@ -762,12 +770,37 @@ export default function FileHistory() {
                       </div>
                     )}
 
+                    {/* Dead Leads (Foreclosed Properties) - Priority Section */}
+                    {comparisonReport.foreclosedProperties && comparisonReport.foreclosedProperties.length > 0 && (
+                      <div className="bg-red-100 rounded-lg border-2 border-red-500 p-4 col-span-full">
+                        <div className="flex items-center gap-2 mb-3">
+                          <AlertCircle className="text-red-700" size={20} />
+                          <h4 className="font-bold text-red-900 text-lg">⚠️ DEAD LEADS - Foreclosed/New Owner ({comparisonReport.foreclosedProperties.length})</h4>
+                        </div>
+                        <p className="text-sm text-red-800 mb-3 font-semibold">
+                          These properties were previously Judgment (J) and are no longer in the file. They have been foreclosed or have a new owner - these leads are no longer valid.
+                        </p>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {comparisonReport.foreclosedProperties.map((fp: any, idx: number) => (
+                            <div key={idx} className="text-xs p-3 bg-white border-2 border-red-300 rounded">
+                              <div className="font-semibold text-red-900">CAN: {fp.CAN || fp.identifier}</div>
+                              <div className="text-gray-700 truncate">{fp.address}</div>
+                              <div className="text-red-700 font-semibold mt-1">{fp.reason || 'Foreclosed or New Owner - Lead No Longer Valid'}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Removed Properties Sample */}
                     {comparisonReport.removedProperties && comparisonReport.removedProperties.length > 0 && (
                       <div className="bg-white rounded-lg border border-red-300 p-4">
                         <h4 className="font-bold text-red-800 mb-2">Removed Properties (Sample)</h4>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {comparisonReport.removedProperties.slice(0, 5).map((rp: any, idx: number) => (
+                          {comparisonReport.removedProperties
+                            .filter((rp: any) => !rp.isForeclosed) // Exclude foreclosed (already shown above)
+                            .slice(0, 5)
+                            .map((rp: any, idx: number) => (
                             <div key={idx} className="text-xs p-2 bg-red-50 rounded">
                               <div className="font-semibold">CAN: {rp.CAN || rp.identifier}</div>
                               <div className="text-gray-600 truncate">{rp.address}</div>
@@ -776,9 +809,9 @@ export default function FileHistory() {
                               )}
                             </div>
                           ))}
-                          {comparisonReport.removedProperties.length > 5 && (
+                          {comparisonReport.removedProperties.filter((rp: any) => !rp.isForeclosed).length > 5 && (
                             <div className="text-xs text-gray-500 italic">
-                              +{comparisonReport.removedProperties.length - 5} more...
+                              +{comparisonReport.removedProperties.filter((rp: any) => !rp.isForeclosed).length - 5} more...
                             </div>
                           )}
                         </div>
