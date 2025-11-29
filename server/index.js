@@ -710,9 +710,9 @@ app.post('/api/reprocess-file', async (req, res) => {
       size: parseInt(fileToReprocess.metadata.size || '0')
     };
     
-    // Get existing properties (empty array for fresh processing)
-    const existingPropertiesJson = JSON.stringify([]);
-    const uploadDate = new Date().toISOString();
+    // Get existing properties from request or use empty array
+    const existingPropertiesJson = existingProperties ? JSON.stringify(existingProperties) : JSON.stringify([]);
+    const uploadDateParam = uploadDate || new Date().toISOString();
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     
     // Process in background
