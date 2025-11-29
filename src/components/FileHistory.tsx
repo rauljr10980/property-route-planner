@@ -83,6 +83,14 @@ export default function FileHistory() {
         const files = await gcsStorage.listFiles();
         const history: FileHistoryEntry[] = files.map(file => {
           const metadata = file.metadata || {};
+          // file.name from GCS API already includes the full path (e.g., "files/1764383304679-Month_2_Summary.959740.csv.xlsx")
+          // Make sure we don't add "files/" prefix if it's already there
+          let storagePath = file.name;
+          if (!storagePath.startsWith('files/')) {
+            // If somehow it doesn't have the prefix, add it
+            storagePath = `files/${storagePath}`;
+          }
+          console.log(`📁 File: ${metadata.originalName || file.name}, storagePath: ${storagePath}`);
           return {
             id: file.name,
             filename: metadata.originalName || file.name,
@@ -91,7 +99,7 @@ export default function FileHistory() {
             rowCount: parseInt(metadata.rowCount || '0'),
             columns: metadata.columns ? JSON.parse(metadata.columns) : [],
             sampleRows: metadata.sampleRows ? JSON.parse(metadata.sampleRows) : [],
-            storagePath: file.name, // file.name already includes the full path (e.g., "files/...")
+            storagePath: storagePath,
             publicUrl: file.url
           };
         });
@@ -381,10 +389,17 @@ export default function FileHistory() {
         setProcessingProgress({ progress: 10, message: 'Reprocessing file from cloud storage...' });
         
         try {
-          console.log('🔄 Reprocessing file with storagePath:', entry.storagePath);
+          // Ensure storagePath doesn't have double "files/" prefix
+          let storagePath = entry.storagePath || '';
+          if (storagePath.startsWith('files/files/')) {
+            // Remove the duplicate prefix
+            storagePath = storagePath.replace(/^files\/files\//, 'files/');
+            console.log('⚠️ Fixed duplicate files/ prefix, new path:', storagePath);
+          }
+          console.log('🔄 Reprocessing file with storagePath:', storagePath);
           console.log('📊 Existing properties count:', existingProperties.length);
           const result = await gcsStorage.reprocessFile(
-            entry.storagePath,
+            storagePath,
             existingProperties,
             entry.uploadDate,
             (progress, message) => {
