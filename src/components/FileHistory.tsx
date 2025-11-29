@@ -27,6 +27,7 @@ export default function FileHistory() {
   const [processingProgress, setProcessingProgress] = useState<{ progress: number; message: string } | null>(null);
   const [comparisonReport, setComparisonReport] = useState<any>(null);
   const [showComparisonReport, setShowComparisonReport] = useState(false);
+  const [changeFilter, setChangeFilter] = useState<'all' | 'status' | 'totpercan' | 'legalstatus'>('all');
 
   useEffect(() => {
     const initialize = async () => {
@@ -588,8 +589,23 @@ export default function FileHistory() {
 
               {showComparisonReport && (
                 <div className="space-y-4">
+                  {/* Summary Message */}
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                    <p className="text-sm text-gray-800">
+                      <strong>I've noticed that there are:</strong>
+                      <br />
+                      • <strong>{comparisonReport.summary.statusChangesCount}</strong> properties with status changes (J/A/P)
+                      {comparisonReport.summary.totPercanChangesCount > 0 && (
+                        <> • <strong>{comparisonReport.summary.totPercanChangesCount}</strong> properties with TOT_PERCAN changes</>
+                      )}
+                      {comparisonReport.summary.legalStatusChangesCount > 0 && (
+                        <> • <strong>{comparisonReport.summary.legalStatusChangesCount}</strong> properties with LEGALSTATUS field changes</>
+                      )}
+                    </p>
+                  </div>
+
                   {/* Summary Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
                     <div className="bg-white p-4 rounded-lg border-2 border-green-300">
                       <div className="text-green-600 font-semibold text-sm">New Properties</div>
                       <div className="text-2xl font-bold text-green-900">
@@ -597,7 +613,7 @@ export default function FileHistory() {
                       </div>
                     </div>
                     <div className="bg-white p-4 rounded-lg border-2 border-red-300">
-                      <div className="text-red-600 font-semibold text-sm">Removed Properties</div>
+                      <div className="text-red-600 font-semibold text-sm">Removed</div>
                       <div className="text-2xl font-bold text-red-900">
                         {comparisonReport.summary.removedPropertiesCount}
                       </div>
@@ -608,11 +624,78 @@ export default function FileHistory() {
                         {comparisonReport.summary.statusChangesCount}
                       </div>
                     </div>
+                    {comparisonReport.summary.totPercanChangesCount > 0 && (
+                      <div className="bg-white p-4 rounded-lg border-2 border-orange-300">
+                        <div className="text-orange-600 font-semibold text-sm">TOT_PERCAN Changes</div>
+                        <div className="text-2xl font-bold text-orange-900">
+                          {comparisonReport.summary.totPercanChangesCount}
+                        </div>
+                      </div>
+                    )}
+                    {comparisonReport.summary.legalStatusChangesCount > 0 && (
+                      <div className="bg-white p-4 rounded-lg border-2 border-purple-300">
+                        <div className="text-purple-600 font-semibold text-sm">LEGALSTATUS Changes</div>
+                        <div className="text-2xl font-bold text-purple-900">
+                          {comparisonReport.summary.legalStatusChangesCount}
+                        </div>
+                      </div>
+                    )}
                     <div className="bg-white p-4 rounded-lg border-2 border-gray-300">
-                      <div className="text-gray-600 font-semibold text-sm">Total in New File</div>
+                      <div className="text-gray-600 font-semibold text-sm">Total Properties</div>
                       <div className="text-2xl font-bold text-gray-900">
                         {comparisonReport.summary.totalPropertiesInNewFile.toLocaleString()}
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Filter Buttons */}
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h4 className="font-bold text-gray-800 mb-3">Filter by Change Type</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setChangeFilter('all')}
+                        className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                          changeFilter === 'all'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                        }`}
+                      >
+                        All Changes ({comparisonReport.summary.statusChangesCount + (comparisonReport.summary.totPercanChangesCount || 0) + (comparisonReport.summary.legalStatusChangesCount || 0)})
+                      </button>
+                      <button
+                        onClick={() => setChangeFilter('status')}
+                        className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                          changeFilter === 'status'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                        }`}
+                      >
+                        Status Changes ({comparisonReport.summary.statusChangesCount})
+                      </button>
+                      {comparisonReport.summary.totPercanChangesCount > 0 && (
+                        <button
+                          onClick={() => setChangeFilter('totpercan')}
+                          className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                            changeFilter === 'totpercan'
+                              ? 'bg-orange-600 text-white'
+                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                          }`}
+                        >
+                          TOT_PERCAN Changes ({comparisonReport.summary.totPercanChangesCount})
+                        </button>
+                      )}
+                      {comparisonReport.summary.legalStatusChangesCount > 0 && (
+                        <button
+                          onClick={() => setChangeFilter('legalstatus')}
+                          className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                            changeFilter === 'legalstatus'
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                          }`}
+                        >
+                          LEGALSTATUS Changes ({comparisonReport.summary.legalStatusChangesCount})
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -683,15 +766,20 @@ export default function FileHistory() {
                       </div>
                     )}
 
-                    {/* Status Changes - Full List */}
-                    {comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && (
+                    {/* Changes Table - Filtered by Change Type */}
+                    {((changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0) ||
+                     (changeFilter === 'totpercan' && comparisonReport.totPercanChanges && comparisonReport.totPercanChanges.length > 0) ||
+                     (changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0) ? (
                       <div className="bg-white rounded-lg border border-blue-300 p-4 col-span-full">
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="font-bold text-blue-800">
-                            All Properties with Status Changes ({comparisonReport.statusChanges.length})
+                            {changeFilter === 'status' && `Status Changes (${comparisonReport.statusChanges.length})`}
+                            {changeFilter === 'totpercan' && `TOT_PERCAN Changes (${comparisonReport.totPercanChanges.length})`}
+                            {changeFilter === 'legalstatus' && `LEGALSTATUS Changes (${comparisonReport.legalStatusChanges.length})`}
+                            {changeFilter === 'all' && `All Changes (${comparisonReport.statusChanges.length + (comparisonReport.totPercanChanges?.length || 0) + (comparisonReport.legalStatusChanges?.length || 0)})`}
                           </h4>
                           <p className="text-xs text-gray-500">
-                            💡 Tip: Go to Dashboard tab to see full property details and filter by status type
+                            💡 Tip: Go to Dashboard tab to see full property details
                           </p>
                         </div>
                         <div className="overflow-x-auto max-h-96 overflow-y-auto">
@@ -700,14 +788,33 @@ export default function FileHistory() {
                               <tr>
                                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">CAN</th>
                                 <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Address</th>
-                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Previous Status</th>
-                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">New Status</th>
-                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Change Type</th>
+                                {changeFilter === 'status' || changeFilter === 'all' ? (
+                                  <>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Previous Status</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">New Status</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Change Type</th>
+                                  </>
+                                ) : null}
+                                {changeFilter === 'totpercan' ? (
+                                  <>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Old TOT_PERCAN</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">New TOT_PERCAN</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Change Amount</th>
+                                  </>
+                                ) : null}
+                                {changeFilter === 'legalstatus' ? (
+                                  <>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Old LEGALSTATUS</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">New LEGALSTATUS</th>
+                                  </>
+                                ) : null}
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Summary</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
-                              {comparisonReport.statusChanges.map((sc: any, idx: number) => (
-                                <tr key={idx} className="hover:bg-blue-50">
+                              {/* Status Changes */}
+                              {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.map((sc: any, idx: number) => (
+                                <tr key={`status-${idx}`} className="hover:bg-blue-50">
                                   <td className="px-3 py-2 text-xs font-mono text-gray-900">
                                     {sc.CAN || sc.identifier}
                                   </td>
@@ -745,13 +852,105 @@ export default function FileHistory() {
                                       {sc.changeType}
                                     </span>
                                   </td>
+                                  <td className="px-3 py-2 text-xs text-gray-600 italic">
+                                    Status changed from {sc.oldStatus || 'NEW'} to {sc.newStatus}
+                                  </td>
                                 </tr>
                               ))}
+                              
+                              {/* TOT_PERCAN Changes */}
+                              {changeFilter === 'totpercan' && comparisonReport.totPercanChanges && comparisonReport.totPercanChanges.map((tp: any, idx: number) => (
+                                <tr key={`totpercan-${idx}`} className="hover:bg-orange-50">
+                                  <td className="px-3 py-2 text-xs font-mono text-gray-900">
+                                    {tp.CAN || tp.identifier}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={tp.address}>
+                                    {tp.address}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-700">
+                                    {tp.oldTotPercan !== null ? parseFloat(String(tp.oldTotPercan)).toFixed(2) : 'N/A'}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-700">
+                                    {tp.newTotPercan !== null ? parseFloat(String(tp.newTotPercan)).toFixed(2) : 'N/A'}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    {tp.changeAmount && (
+                                      <span className={`px-2 py-1 text-xs font-medium rounded ${
+                                        parseFloat(tp.changeAmount) > 0 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                      }`}>
+                                        {parseFloat(tp.changeAmount) > 0 ? '+' : ''}{tp.changeAmount}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-600 italic">
+                                    TOT_PERCAN changed from {tp.oldTotPercan !== null ? parseFloat(String(tp.oldTotPercan)).toFixed(2) : 'N/A'} to {tp.newTotPercan !== null ? parseFloat(String(tp.newTotPercan)).toFixed(2) : 'N/A'}
+                                  </td>
+                                </tr>
+                              ))}
+                              
+                              {/* LEGALSTATUS Changes */}
+                              {changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
+                                <tr key={`legalstatus-${idx}`} className="hover:bg-purple-50">
+                                  <td className="px-3 py-2 text-xs font-mono text-gray-900">
+                                    {ls.CAN || ls.identifier}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={ls.address}>
+                                    {ls.address}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-700">
+                                    {ls.oldLegalStatus || 'N/A'}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-700">
+                                    {ls.newLegalStatus || 'N/A'}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-600 italic">
+                                    LEGALSTATUS changed from "{ls.oldLegalStatus || 'N/A'}" to "{ls.newLegalStatus || 'N/A'}"
+                                  </td>
+                                </tr>
+                              ))}
+                              
+                              {/* All Changes Combined */}
+                              {changeFilter === 'all' && (
+                                <>
+                                  {comparisonReport.totPercanChanges && comparisonReport.totPercanChanges.map((tp: any, idx: number) => (
+                                    <tr key={`all-totpercan-${idx}`} className="hover:bg-orange-50">
+                                      <td className="px-3 py-2 text-xs font-mono text-gray-900">
+                                        {tp.CAN || tp.identifier}
+                                      </td>
+                                      <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={tp.address}>
+                                        {tp.address}
+                                      </td>
+                                      <td colSpan={3} className="px-3 py-2 text-xs text-gray-500 italic">
+                                        TOT_PERCAN Change
+                                      </td>
+                                      <td className="px-3 py-2 text-xs text-gray-600 italic">
+                                        TOT_PERCAN: {tp.oldTotPercan !== null ? parseFloat(String(tp.oldTotPercan)).toFixed(2) : 'N/A'} → {tp.newTotPercan !== null ? parseFloat(String(tp.newTotPercan)).toFixed(2) : 'N/A'}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                  {comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
+                                    <tr key={`all-legalstatus-${idx}`} className="hover:bg-purple-50">
+                                      <td className="px-3 py-2 text-xs font-mono text-gray-900">
+                                        {ls.CAN || ls.identifier}
+                                      </td>
+                                      <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={ls.address}>
+                                        {ls.address}
+                                      </td>
+                                      <td colSpan={3} className="px-3 py-2 text-xs text-gray-500 italic">
+                                        LEGALSTATUS Change
+                                      </td>
+                                      <td className="px-3 py-2 text-xs text-gray-600 italic">
+                                        LEGALSTATUS: "{ls.oldLegalStatus || 'N/A'}" → "{ls.newLegalStatus || 'N/A'}"
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </>
+                              )}
                             </tbody>
                           </table>
                         </div>
                       </div>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               )}

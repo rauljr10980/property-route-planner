@@ -1266,6 +1266,8 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     const processedProperties = [];
     const newStatusChanges = [];
     const newProperties = []; // Properties that didn't exist before
+    const totPercanChanges = []; // Properties with TOT_PERCAN changes
+    const legalStatusChanges = []; // Properties with LEGALSTATUS field changes (any change, not just J/A/P)
     const processedIds = new Set();
 
     jsonData.forEach((propData) => {
@@ -1278,6 +1280,23 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
       else statusCounts.null++;
       
       const existingProperty = existingMap.get(identifier);
+      
+      // Track TOT_PERCAN changes
+      const newTotPercan = propData.TOT_PERCAN || propData['TOT_PERCAN'] || null;
+      const oldTotPercan = existingProperty?.TOT_PERCAN || existingProperty?.['TOT_PERCAN'] || null;
+      const totPercanChanged = existingProperty && (
+        (newTotPercan !== null && oldTotPercan !== null && 
+         parseFloat(String(newTotPercan)) !== parseFloat(String(oldTotPercan))) ||
+        (newTotPercan !== null && oldTotPercan === null) ||
+        (newTotPercan === null && oldTotPercan !== null)
+      );
+      
+      // Track LEGALSTATUS field changes (any change in the actual LEGALSTATUS value)
+      const newLegalStatus = propData.LEGALSTATUS || propData['LEGALSTATUS'] || null;
+      const oldLegalStatus = existingProperty?.LEGALSTATUS || existingProperty?.['LEGALSTATUS'] || null;
+      const legalStatusChanged = existingProperty && (
+        String(newLegalStatus || '').trim() !== String(oldLegalStatus || '').trim()
+      );
 
       let property = {
         ...propData,
@@ -1308,7 +1327,8 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
             newStatus,
             daysSinceChange,
             identifier,
-            address: propData.ADDRSTRING || propData.address || 'N/A'
+            address: propData.ADDRSTRING || propData.address || 'N/A',
+            CAN: propData.CAN || null
           });
         } else {
           // Status didn't change, keep existing status change date
@@ -1318,6 +1338,33 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
             statusChangeDate: existingProperty.statusChangeDate || uploadDate,
             daysSinceStatusChange: existingProperty.daysSinceStatusChange || 0
           };
+        }
+        
+        // Track TOT_PERCAN changes
+        if (totPercanChanged) {
+          totPercanChanges.push({
+            property,
+            identifier,
+            address: propData.ADDRSTRING || propData.address || 'N/A',
+            CAN: propData.CAN || null,
+            oldTotPercan: oldTotPercan,
+            newTotPercan: newTotPercan,
+            changeAmount: newTotPercan !== null && oldTotPercan !== null 
+              ? (parseFloat(String(newTotPercan)) - parseFloat(String(oldTotPercan))).toFixed(2)
+              : null
+          });
+        }
+        
+        // Track LEGALSTATUS field changes
+        if (legalStatusChanged) {
+          legalStatusChanges.push({
+            property,
+            identifier,
+            address: propData.ADDRSTRING || propData.address || 'N/A',
+            CAN: propData.CAN || null,
+            oldLegalStatus: oldLegalStatus,
+            newLegalStatus: newLegalStatus
+          });
         }
       } else {
         // New property (didn't exist in previous file)
@@ -1336,7 +1383,8 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
             newStatus,
             daysSinceChange: 0,
             identifier,
-            address: propData.ADDRSTRING || propData.address || 'N/A'
+            address: propData.ADDRSTRING || propData.address || 'N/A',
+            CAN: propData.CAN || null
           });
         }
       }
@@ -1379,6 +1427,8 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     console.log(`   - New properties added: ${newProperties.length}`);
     console.log(`   - Properties removed: ${removedProperties.length}`);
     console.log(`   - Status changes: ${newStatusChanges.length}`);
+    console.log(`   - TOT_PERCAN changes: ${totPercanChanges.length}`);
+    console.log(`   - LEGALSTATUS field changes: ${legalStatusChanges.length}`);
     
     // Create comprehensive comparison report
     const comparisonReport = {
@@ -1389,7 +1439,9 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         totalPropertiesInPreviousFile: existingProperties.length,
         newPropertiesCount: newProperties.length,
         removedPropertiesCount: removedProperties.length,
-        statusChangesCount: newStatusChanges.length
+        statusChangesCount: newStatusChanges.length,
+        totPercanChangesCount: totPercanChanges.length,
+        legalStatusChangesCount: legalStatusChanges.length
       },
       newProperties: newProperties.map(np => ({
         identifier: np.identifier,
@@ -1408,10 +1460,25 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         address: sc.address,
         oldStatus: sc.oldStatus,
         newStatus: sc.newStatus,
-        CAN: sc.property.CAN || null,
+        CAN: sc.CAN || sc.property?.CAN || null,
         changeType: sc.oldStatus === null ? 'NEW' : 
                     sc.newStatus === null ? 'REMOVED_STATUS' :
                     `${sc.oldStatus}→${sc.newStatus}`
+      })),
+      totPercanChanges: totPercanChanges.map(tp => ({
+        identifier: tp.identifier,
+        address: tp.address,
+        CAN: tp.CAN || null,
+        oldTotPercan: tp.oldTotPercan,
+        newTotPercan: tp.newTotPercan,
+        changeAmount: tp.changeAmount
+      })),
+      legalStatusChanges: legalStatusChanges.map(ls => ({
+        identifier: ls.identifier,
+        address: ls.address,
+        CAN: ls.CAN || null,
+        oldLegalStatus: ls.oldLegalStatus,
+        newLegalStatus: ls.newLegalStatus
       }))
     };
     
