@@ -252,6 +252,55 @@ export default function PropertyDashboard() {
       .sort((a, b) => a.year.localeCompare(b.year));
   };
 
+  // Calculate distance between two coordinates (Haversine formula)
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // Earth's radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Optimize route using nearest neighbor algorithm (TSP approximation)
+  const optimizeRoute = (properties: Property[]): Property[] => {
+    if (properties.length <= 1) return properties;
+    
+    const optimized: Property[] = [];
+    const remaining = [...properties];
+    
+    // Start with the first property (or could use center point)
+    let current = remaining.shift()!;
+    optimized.push(current);
+    
+    while (remaining.length > 0) {
+      let nearestIndex = 0;
+      let nearestDistance = Infinity;
+      
+      // Find the nearest unvisited property
+      for (let i = 0; i < remaining.length; i++) {
+        const distance = calculateDistance(
+          current.lat!,
+          current.lng!,
+          remaining[i].lat!,
+          remaining[i].lng!
+        );
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearestIndex = i;
+        }
+      }
+      
+      current = remaining.splice(nearestIndex, 1)[0];
+      optimized.push(current);
+    }
+    
+    return optimized;
+  };
+
   const createRoute = (statuses?: ('J' | 'A' | 'P')[]) => {
     let propertiesToRoute = getFilteredProperties();
     
@@ -269,12 +318,45 @@ export default function PropertyDashboard() {
       return;
     }
 
-    const waypoints = propertiesWithCoords
-      .map(p => `${p.lat},${p.lng}`)
-      .join('/');
+    // Optimize the route order
+    const optimizedProperties = optimizeRoute(propertiesWithCoords);
     
-    const url = `https://www.google.com/maps/dir/${waypoints}`;
-    window.open(url, '_blank');
+    // Google Maps has a limit of 25 waypoints (excluding start/end)
+    const MAX_WAYPOINTS = 25;
+    
+    if (optimizedProperties.length <= MAX_WAYPOINTS) {
+      // Single route for all properties
+      const waypoints = optimizedProperties
+        .map(p => `${p.lat},${p.lng}`)
+        .join('/');
+      const url = `https://www.google.com/maps/dir/${waypoints}`;
+      window.open(url, '_blank');
+    } else {
+      // Split into multiple routes
+      const routeCount = Math.ceil(optimizedProperties.length / MAX_WAYPOINTS);
+      const message = `You have ${optimizedProperties.length} properties to route. Google Maps allows up to 25 waypoints per route.\n\nWould you like to create ${routeCount} optimized routes?`;
+      
+      if (confirm(message)) {
+        // Create multiple routes
+        for (let i = 0; i < routeCount; i++) {
+          const start = i * MAX_WAYPOINTS;
+          const end = Math.min(start + MAX_WAYPOINTS, optimizedProperties.length);
+          const routeProperties = optimizedProperties.slice(start, end);
+          
+          const waypoints = routeProperties
+            .map(p => `${p.lat},${p.lng}`)
+            .join('/');
+          const url = `https://www.google.com/maps/dir/${waypoints}`;
+          
+          // Open first route immediately, others after a short delay
+          if (i === 0) {
+            window.open(url, '_blank');
+          } else {
+            setTimeout(() => window.open(url, '_blank'), i * 500);
+          }
+        }
+      }
+    }
   };
 
   const toggleStatusFilter = (status: 'J' | 'A' | 'P') => {
@@ -558,9 +640,10 @@ export default function PropertyDashboard() {
                     onClick={() => createRoute(['J', 'A', 'P'])}
                     disabled={filteredProps.filter(p => p.lat && p.lng).length === 0}
                     className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
+                    title="Create optimized route for all filtered properties (minimizes travel distance)"
                   >
                     <Navigation className="w-4 h-4" />
-                    Create Route ({filteredProps.filter(p => p.lat && p.lng).length})
+                    Create Optimized Route ({filteredProps.filter(p => p.lat && p.lng).length})
                   </button>
                 </div>
               </div>
