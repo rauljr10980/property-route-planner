@@ -435,12 +435,29 @@ app.get('/api/download', async (req, res) => {
       return res.status(404).json({ error: 'File not found' });
     }
 
+    // Get file metadata
+    const [metadata] = await fileRef.getMetadata();
+    const contentType = metadata.contentType || 'application/octet-stream';
+    const filename = metadata.metadata?.originalName || storagePath.split('/').pop() || 'file.xlsx';
+
+    // Set headers for file download
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
     // Stream file to response
     const stream = fileRef.createReadStream();
+    stream.on('error', (error) => {
+      console.error('Stream error:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: error.message || 'Download failed' });
+      }
+    });
     stream.pipe(res);
   } catch (error) {
     console.error('Download error:', error);
-    res.status(500).json({ error: error.message || 'Download failed' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || 'Download failed' });
+    }
   }
 });
 
