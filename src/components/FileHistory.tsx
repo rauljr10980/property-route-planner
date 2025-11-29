@@ -656,7 +656,7 @@ export default function FileHistory() {
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-bold text-gray-800">Filter by Change Type</h4>
                       {/* Previous Status Dropdown - Only show for status changes */}
-                      {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport && comparisonReport.statusChanges !== undefined && (
+                      {comparisonReport && (changeFilter === 'all' || changeFilter === 'status') && (
                         <div className="relative">
                           <label className="text-xs font-semibold text-gray-700 mr-2">Previous Status:</label>
                           <select
