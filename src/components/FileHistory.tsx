@@ -397,10 +397,11 @@ export default function FileHistory() {
             console.log('⚠️ Fixed duplicate files/ prefix, new path:', storagePath);
           }
           console.log('🔄 Reprocessing file with storagePath:', storagePath);
-          console.log('📊 Existing properties count:', existingProperties.length);
+          // Don't send existingProperties in request body - backend will load from GCS
+          // This avoids 413 Payload Too Large errors with 58,000+ properties
           const result = await gcsStorage.reprocessFile(
             storagePath,
-            existingProperties,
+            [], // Empty array - backend will load from GCS
             entry.uploadDate,
             (progress, message) => {
               setProcessingProgress({ progress, message });

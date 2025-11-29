@@ -674,7 +674,7 @@ app.get('/api/comparison-report', async (req, res) => {
 // Reprocess an existing file from GCS
 app.post('/api/reprocess-file', async (req, res) => {
   try {
-    const { filename, storagePath, existingProperties, uploadDate } = req.body;
+    const { filename, storagePath, uploadDate } = req.body;
     
     let fileToReprocess;
     
@@ -712,6 +712,26 @@ app.post('/api/reprocess-file', async (req, res) => {
     
     console.log(`🔄 Reprocessing file: ${fileToReprocess.name}`);
     
+    // Load existing properties from GCS (don't send them in request body - too large!)
+    console.log(`📥 Loading existing properties from GCS for comparison...`);
+    let existingProperties = [];
+    try {
+      const dataPath = 'data/properties.json';
+      const dataFileRef = bucket.file(dataPath);
+      const [dataExists] = await dataFileRef.exists();
+      if (dataExists) {
+        const [dataFile] = await dataFileRef.download();
+        const data = JSON.parse(dataFile.toString());
+        existingProperties = data.properties || [];
+        console.log(`✅ Loaded ${existingProperties.length} existing properties from GCS`);
+      } else {
+        console.log(`⚠️ No existing properties found in GCS (first upload)`);
+      }
+    } catch (loadError) {
+      console.warn('⚠️ Failed to load existing properties from GCS, using empty array:', loadError.message);
+      existingProperties = [];
+    }
+    
     // Download the file from GCS
     let fileBuffer;
     try {
@@ -732,8 +752,8 @@ app.post('/api/reprocess-file', async (req, res) => {
       size: parseInt(fileToReprocess.metadata.size || '0')
     };
     
-    // Get existing properties from request or use empty array
-    const existingPropertiesJson = existingProperties ? JSON.stringify(existingProperties) : JSON.stringify([]);
+    // Use existing properties loaded from GCS (not from request body)
+    const existingPropertiesJson = JSON.stringify(existingProperties);
     const uploadDateParam = uploadDate || new Date().toISOString();
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     

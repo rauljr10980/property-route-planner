@@ -282,10 +282,11 @@ class GCSStorageService {
 
   /**
    * Reprocess an existing file from GCS (without downloading)
+   * Note: existingProperties is no longer sent - backend loads from GCS to avoid 413 errors
    */
   async reprocessFile(
     storagePath: string,
-    existingProperties: any[],
+    existingProperties: any[], // Not used anymore - backend loads from GCS
     uploadDate: string,
     onProgress?: (progress: number, message: string) => void
   ): Promise<{
@@ -305,7 +306,7 @@ class GCSStorageService {
         },
         body: JSON.stringify({
           storagePath,
-          existingProperties,
+          // Don't send existingProperties - backend loads from GCS to avoid 413 Payload Too Large
           uploadDate
         })
       });
