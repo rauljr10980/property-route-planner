@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, AlertCircle, History, Trash2, Eye, X, Download, Search, Calendar, FileText, CheckCircle, TrendingUp } from 'lucide-react';
+import { Upload, AlertCircle, History, Trash2, Eye, X, Download, Search, Calendar, FileText, CheckCircle, TrendingUp, ChevronDown } from 'lucide-react';
 import { Property } from '../utils/fileProcessor';
 import { saveSharedProperties, loadSharedProperties, loadSharedPropertiesSync, clearSharedProperties } from '../utils/sharedData';
 import gcsStorage from '../services/gcsStorage';
@@ -28,6 +28,7 @@ export default function FileHistory() {
   const [comparisonReport, setComparisonReport] = useState<any>(null);
   const [showComparisonReport, setShowComparisonReport] = useState(true); // Default to showing the report
   const [changeFilter, setChangeFilter] = useState<'all' | 'status' | 'totpercan' | 'legalstatus'>('all');
+  const [previousStatusFilter, setPreviousStatusFilter] = useState<'all' | 'J' | 'A' | 'P' | 'new'>('all');
 
   useEffect(() => {
     const initialize = async () => {
@@ -653,7 +654,7 @@ export default function FileHistory() {
                   {/* Filter Buttons */}
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                     <h4 className="font-bold text-gray-800 mb-3">Filter by Change Type</h4>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 items-center">
                       <button
                         onClick={() => setChangeFilter('all')}
                         className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
@@ -694,6 +695,25 @@ export default function FileHistory() {
                       >
                         LEGALSTATUS Changes ({comparisonReport.summary?.legalStatusChangesCount || 0})
                       </button>
+                      
+                      {/* Previous Status Dropdown - Only show for status changes */}
+                      {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && (
+                        <div className="relative ml-auto">
+                          <label className="text-xs font-semibold text-gray-700 mr-2">Filter by Previous Status:</label>
+                          <select
+                            value={previousStatusFilter}
+                            onChange={(e) => setPreviousStatusFilter(e.target.value as 'all' | 'J' | 'A' | 'P' | 'new')}
+                            className="px-4 py-2 rounded-md text-sm font-semibold bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer pr-8"
+                          >
+                            <option value="all">All Properties</option>
+                            <option value="J">Judgment (J)</option>
+                            <option value="A">Active (A)</option>
+                            <option value="P">Pending (P)</option>
+                            <option value="new">New (No Previous Status)</option>
+                          </select>
+                          <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none w-4 h-4" />
+                        </div>
+                      )}
                     </div>
                   </div>
 
