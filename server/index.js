@@ -704,7 +704,7 @@ app.post('/api/reprocess-file', async (req, res) => {
     try {
       [fileBuffer] = await fileToReprocess.download();
       console.log(`✅ Downloaded file from GCS: ${fileBuffer.length} bytes`);
-    } catch (downloadError: any) {
+    } catch (downloadError) {
       console.error('❌ Failed to download file from GCS:', downloadError);
       return res.status(500).json({ 
         error: `Failed to download file from storage: ${downloadError.message || 'Unknown error'}` 
