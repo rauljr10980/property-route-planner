@@ -831,7 +831,13 @@ export default function FileHistory() {
                             </thead>
                             <tbody className="divide-y divide-gray-200">
                               {/* Status Changes */}
-                              {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && comparisonReport.statusChanges.map((sc: any, idx: number) => (
+                              {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && comparisonReport.statusChanges
+                                .filter((sc: any) => {
+                                  if (previousStatusFilter === 'all') return true;
+                                  if (previousStatusFilter === 'new') return sc.oldStatus === null;
+                                  return sc.oldStatus === previousStatusFilter;
+                                })
+                                .map((sc: any, idx: number) => (
                                 <tr key={`status-${idx}`} className="hover:bg-blue-50">
                                   <td className="px-3 py-2 text-xs font-mono text-gray-900">
                                     {sc.CAN || sc.identifier}
