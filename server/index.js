@@ -680,11 +680,24 @@ app.post('/api/reprocess-file', async (req, res) => {
     
     if (storagePath) {
       // Use storagePath if provided (more direct)
+      console.log(`🔍 Looking for file at path: "${storagePath}"`);
       fileToReprocess = bucket.file(storagePath);
       const [exists] = await fileToReprocess.exists();
       if (!exists) {
-        return res.status(404).json({ error: 'File not found at specified path' });
+        console.error(`❌ File not found at path: "${storagePath}"`);
+        // Try to find the file by listing all files to help debug
+        try {
+          const [allFiles] = await bucket.getFiles({ prefix: 'files/' });
+          console.log(`📁 Available files in GCS (${allFiles.length} total):`);
+          allFiles.slice(0, 10).forEach(f => {
+            console.log(`   - ${f.name}`);
+          });
+        } catch (listError) {
+          console.error('Failed to list files for debugging:', listError);
+        }
+        return res.status(404).json({ error: `File not found at specified path: ${storagePath}` });
       }
+      console.log(`✅ File found at path: "${storagePath}"`);
     } else if (filename) {
       // Fallback: Find by filename
       const [files] = await bucket.getFiles({ prefix: 'files/' });

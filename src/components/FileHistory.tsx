@@ -378,6 +378,8 @@ export default function FileHistory() {
         setProcessingProgress({ progress: 10, message: 'Reprocessing file from cloud storage...' });
         
         try {
+          console.log('🔄 Reprocessing file with storagePath:', entry.storagePath);
+          console.log('📊 Existing properties count:', existingProperties.length);
           const result = await gcsStorage.reprocessFile(
             entry.storagePath,
             existingProperties,
