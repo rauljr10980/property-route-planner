@@ -102,10 +102,13 @@ export default function FileHistory() {
         console.log('GCS API not available, trying localStorage:', gcsError);
       }
 
-      // Fallback to localStorage
+      // Fallback to localStorage (but only if GCS failed - GCS is source of truth)
+      // Don't use localStorage cache if GCS is available, as paths might be outdated
       const savedHistory = localStorage.getItem('property-tax-file-history');
       if (savedHistory) {
-        setFileHistory(JSON.parse(savedHistory));
+        console.log('⚠️ Using localStorage file history (GCS unavailable). Paths may be outdated.');
+        // Only use localStorage if GCS completely failed
+        // Otherwise, we already set fileHistory from GCS above
       }
     } catch (error) {
       console.error('Error loading file history:', error);
