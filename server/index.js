@@ -674,18 +674,27 @@ app.get('/api/comparison-report', async (req, res) => {
 // Reprocess an existing file from GCS
 app.post('/api/reprocess-file', async (req, res) => {
   try {
-    const { filename } = req.body;
+    const { filename, storagePath, existingProperties, uploadDate } = req.body;
     
-    if (!filename) {
-      return res.status(400).json({ error: 'Filename is required' });
-    }
+    let fileToReprocess;
     
-    // Find the file in GCS
-    const [files] = await bucket.getFiles({ prefix: 'files/' });
-    const fileToReprocess = files.find(f => f.name.includes(filename) || f.metadata?.metadata?.originalName === filename);
-    
-    if (!fileToReprocess) {
-      return res.status(404).json({ error: 'File not found in storage' });
+    if (storagePath) {
+      // Use storagePath if provided (more direct)
+      fileToReprocess = bucket.file(storagePath);
+      const [exists] = await fileToReprocess.exists();
+      if (!exists) {
+        return res.status(404).json({ error: 'File not found at specified path' });
+      }
+    } else if (filename) {
+      // Fallback: Find by filename
+      const [files] = await bucket.getFiles({ prefix: 'files/' });
+      fileToReprocess = files.find(f => f.name.includes(filename) || f.metadata?.metadata?.originalName === filename);
+      
+      if (!fileToReprocess) {
+        return res.status(404).json({ error: 'File not found in storage' });
+      }
+    } else {
+      return res.status(400).json({ error: 'Filename or storagePath is required' });
     }
     
     console.log(`🔄 Reprocessing file: ${fileToReprocess.name}`);
@@ -707,7 +716,7 @@ app.post('/api/reprocess-file', async (req, res) => {
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     
     // Process in background
-    processFileAsync(mockFile, existingPropertiesJson, uploadDate, ip).catch(error => {
+    processFileAsync(mockFile, existingPropertiesJson, uploadDateParam, ip).catch(error => {
       console.error('❌ Background reprocessing error:', error);
       console.error('Error stack:', error.stack);
     });
