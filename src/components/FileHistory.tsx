@@ -370,14 +370,15 @@ export default function FileHistory() {
         // Use reprocess endpoint (more efficient - no download needed)
         setProcessingProgress({ progress: 10, message: 'Reprocessing file from cloud storage...' });
         
-        const result = await gcsStorage.reprocessFile(
-          entry.storagePath,
-          existingProperties,
-          entry.uploadDate,
-          (progress, message) => {
-            setProcessingProgress({ progress, message });
-          }
-        );
+        try {
+          const result = await gcsStorage.reprocessFile(
+            entry.storagePath,
+            existingProperties,
+            entry.uploadDate,
+            (progress, message) => {
+              setProcessingProgress({ progress, message });
+            }
+          );
 
         // Wait for properties to be saved to GCS, then load them
         setProcessingProgress({ progress: 90, message: 'Loading processed properties...' });
@@ -402,12 +403,16 @@ export default function FileHistory() {
           await saveSharedProperties(mergedProperties, entry.uploadDate);
         }
 
-        // Load comparison report
-        await loadComparisonReport();
+          // Load comparison report
+          await loadComparisonReport();
 
-        setProcessingProgress(null);
+          setProcessingProgress(null);
 
-        alert(`File "${entry.filename}" reprocessed successfully!\n\n${mergedProperties.length} total properties\n\nCheck the File Comparison Report to see all changes.`);
+          alert(`File "${entry.filename}" reprocessed successfully!\n\n${mergedProperties.length} total properties\n\nCheck the File Comparison Report to see all changes.`);
+        } catch (reprocessError: any) {
+          console.error('Reprocess error:', reprocessError);
+          throw new Error(`Failed to reprocess file: ${reprocessError.message || 'Unknown error'}`);
+        }
       } else if (entry.fileData) {
         // Fallback: download and process if no storagePath
         setProcessingProgress({ progress: 20, message: 'Downloading file...' });

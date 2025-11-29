@@ -700,7 +700,16 @@ app.post('/api/reprocess-file', async (req, res) => {
     console.log(`🔄 Reprocessing file: ${fileToReprocess.name}`);
     
     // Download the file from GCS
-    const [fileBuffer] = await fileToReprocess.download();
+    let fileBuffer;
+    try {
+      [fileBuffer] = await fileToReprocess.download();
+      console.log(`✅ Downloaded file from GCS: ${fileBuffer.length} bytes`);
+    } catch (downloadError: any) {
+      console.error('❌ Failed to download file from GCS:', downloadError);
+      return res.status(500).json({ 
+        error: `Failed to download file from storage: ${downloadError.message || 'Unknown error'}` 
+      });
+    }
     
     // Create a mock file object for processing
     const mockFile = {
