@@ -487,6 +487,143 @@ export default function PropertyDashboard() {
               </div>
             </div>
 
+            {/* Comparison Report Section */}
+            {comparisonReport && (
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200 p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="text-purple-600" size={24} />
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">File Comparison Report</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Changes detected between previous file and latest upload
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowComparisonReport(!showComparisonReport)}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
+                  >
+                    {showComparisonReport ? 'Hide' : 'Show'} Report
+                  </button>
+                </div>
+
+                {showComparisonReport && (
+                  <div className="space-y-4">
+                    {/* Summary Message */}
+                    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                      <p className="text-sm text-gray-800">
+                        <strong>I've noticed that there are:</strong>
+                        <br />
+                        • <strong>{comparisonReport.summary?.statusChangesCount || 0}</strong> properties with status changes (J/A/P)
+                        {comparisonReport.summary?.totPercanChangesCount !== undefined && (
+                          <> • <strong>{comparisonReport.summary.totPercanChangesCount || 0}</strong> properties with TOT_PERCAN changes</>
+                        )}
+                        {comparisonReport.summary?.legalStatusChangesCount !== undefined && (
+                          <> • <strong>{comparisonReport.summary.legalStatusChangesCount || 0}</strong> properties with LEGALSTATUS field changes</>
+                        )}
+                        {comparisonReport.summary?.foreclosedPropertiesCount > 0 && (
+                          <> • <strong className="text-red-700">{comparisonReport.summary.foreclosedPropertiesCount}</strong> <span className="text-red-700 font-semibold">DEAD LEADS</span> (were Judgment, now foreclosed/new owner)</>
+                        )}
+                        {(!comparisonReport.summary || 
+                          (comparisonReport.summary.statusChangesCount === 0 && 
+                           (comparisonReport.summary.totPercanChangesCount || 0) === 0 && 
+                           (comparisonReport.summary.legalStatusChangesCount || 0) === 0)) && (
+                          <span className="text-gray-500 italic"> (No changes detected in this upload)</span>
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                      <div className="bg-white p-4 rounded-lg border-2 border-green-300">
+                        <div className="text-green-600 font-semibold text-sm">New Properties</div>
+                        <div className="text-2xl font-bold text-green-900">
+                          {comparisonReport.summary?.newPropertiesCount || 0}
+                        </div>
+                      </div>
+                      <div className="bg-white p-4 rounded-lg border-2 border-red-300">
+                        <div className="text-red-600 font-semibold text-sm">Removed</div>
+                        <div className="text-2xl font-bold text-red-900">
+                          {comparisonReport.summary?.removedPropertiesCount || 0}
+                        </div>
+                        {comparisonReport.summary?.foreclosedPropertiesCount > 0 && (
+                          <div className="text-xs text-red-700 mt-1 font-semibold">
+                            {comparisonReport.summary.foreclosedPropertiesCount} Dead Leads (Were Judgment)
+                          </div>
+                        )}
+                      </div>
+                      <div className="bg-white p-4 rounded-lg border-2 border-blue-300">
+                        <div className="text-blue-600 font-semibold text-sm">Status Changes</div>
+                        <div className="text-2xl font-bold text-blue-900">
+                          {comparisonReport.summary?.statusChangesCount || 0}
+                        </div>
+                      </div>
+                      <div className="bg-white p-4 rounded-lg border-2 border-orange-300">
+                        <div className="text-orange-600 font-semibold text-sm">TOT_PERCAN Changes</div>
+                        <div className="text-2xl font-bold text-orange-900">
+                          {comparisonReport.summary?.totPercanChangesCount || 0}
+                        </div>
+                      </div>
+                      <div className="bg-white p-4 rounded-lg border-2 border-purple-300">
+                        <div className="text-purple-600 font-semibold text-sm">LEGALSTATUS Changes</div>
+                        <div className="text-2xl font-bold text-purple-900">
+                          {comparisonReport.summary?.legalStatusChangesCount || 0}
+                        </div>
+                      </div>
+                      <div className="bg-white p-4 rounded-lg border-2 border-gray-300">
+                        <div className="text-gray-600 font-semibold text-sm">Total Properties</div>
+                        <div className="text-2xl font-bold text-gray-900">
+                          {comparisonReport.summary?.totalPropertiesInNewFile?.toLocaleString() || 0}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dead Leads Section */}
+                    {comparisonReport.foreclosedProperties && comparisonReport.foreclosedProperties.length > 0 && (
+                      <div className="bg-red-100 rounded-lg border-2 border-red-500 p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <AlertCircle className="text-red-700" size={20} />
+                          <h4 className="font-bold text-red-900 text-lg">⚠️ DEAD LEADS - Foreclosed/New Owner ({comparisonReport.foreclosedProperties.length})</h4>
+                        </div>
+                        <p className="text-sm text-red-800 mb-3 font-semibold">
+                          These properties were previously Judgment (J) and are no longer in the file. They have been foreclosed or have a new owner - these leads are no longer valid.
+                        </p>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {comparisonReport.foreclosedProperties.map((fp: any, idx: number) => (
+                            <div key={idx} className="text-xs p-3 bg-white border-2 border-red-300 rounded">
+                              <div className="font-semibold text-red-900">CAN: {fp.CAN || fp.identifier}</div>
+                              <div className="text-gray-700 truncate">{fp.address}</div>
+                              <div className="text-red-700 font-semibold mt-1">{fp.reason || 'Foreclosed or New Owner - Lead No Longer Valid'}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Status Change Breakdown */}
+                    {comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && (
+                      <div className="bg-white rounded-lg border border-gray-200 p-4">
+                        <h4 className="font-bold text-gray-800 mb-3">Status Change Breakdown</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                          {['P→A', 'P→J', 'A→J', 'A→P', 'J→A', 'J→P', 'NEW→J', 'NEW→A', 'NEW→P'].map(changeType => {
+                            const count = comparisonReport.statusChanges.filter((sc: any) => sc.changeType === changeType).length;
+                            if (count === 0) return null;
+                            return (
+                              <div key={changeType} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                                <span className="font-semibold text-gray-700">{changeType}:</span>
+                                <span className="font-bold text-gray-900">{count}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Status Changes Panel */}
             {properties.length > 0 && (
               <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-6 mb-6">
