@@ -91,7 +91,7 @@ export default function FileHistory() {
             rowCount: parseInt(metadata.rowCount || '0'),
             columns: metadata.columns ? JSON.parse(metadata.columns) : [],
             sampleRows: metadata.sampleRows ? JSON.parse(metadata.sampleRows) : [],
-            storagePath: `files/${file.name}`,
+            storagePath: file.name, // file.name already includes the full path (e.g., "files/...")
             publicUrl: file.url
           };
         });
