@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlertCircle, TrendingUp, Map, Filter, TrendingDown, Minus, Navigation, CheckCircle, X } from 'lucide-react';
+import { AlertCircle, TrendingUp, Map, Filter, TrendingDown, Minus, Navigation, CheckCircle, X, ChevronDown } from 'lucide-react';
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { loadSharedProperties } from '../utils/sharedData';
@@ -40,6 +40,10 @@ export default function PropertyDashboard() {
   const [transitionFilter, setTransitionFilter] = useState<string | null>(null); // 'blank-to-p', 'p-to-a', 'a-to-j', 'j-to-deleted'
   const [showStatusChanges, setShowStatusChanges] = useState(true);
   const [deadLeads, setDeadLeads] = useState<any[]>([]); // Properties that were J and got removed
+  const [comparisonReport, setComparisonReport] = useState<any>(null);
+  const [showComparisonReport, setShowComparisonReport] = useState(true);
+  const [changeFilter, setChangeFilter] = useState<'all' | 'status' | 'totpercan' | 'legalstatus'>('all');
+  const [previousStatusFilter, setPreviousStatusFilter] = useState<'all' | 'J' | 'A' | 'P' | 'new'>('all');
   const [mapCenter, setMapCenter] = useState({ lat: 29.4241, lng: -98.4936 });
   const [mapZoom, setMapZoom] = useState(11);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -77,15 +81,40 @@ export default function PropertyDashboard() {
       setProperties(sharedProps);
       console.log(`✅ Property Dashboard loaded ${sharedProps.length} properties`);
       
-      // Load comparison report to get dead leads (J to deleted)
+      // Load comparison report to get dead leads and full report
       try {
         const comparisonResult = await gcsStorage.loadComparisonReport();
-        if (comparisonResult && comparisonResult.report && comparisonResult.report.foreclosedProperties) {
-          setDeadLeads(comparisonResult.report.foreclosedProperties);
-          console.log(`✅ Loaded ${comparisonResult.report.foreclosedProperties.length} dead leads from comparison report`);
+        if (comparisonResult && comparisonResult.report) {
+          setComparisonReport(comparisonResult.report);
+          if (comparisonResult.report.foreclosedProperties) {
+            setDeadLeads(comparisonResult.report.foreclosedProperties);
+            console.log(`✅ Loaded ${comparisonResult.report.foreclosedProperties.length} dead leads from comparison report`);
+          }
+          console.log(`✅ Loaded comparison report with ${comparisonResult.report.summary?.statusChangesCount || 0} status changes`);
+        } else {
+          // Initialize with empty report structure if none exists
+          setComparisonReport({
+            summary: {
+              newPropertiesCount: 0, removedPropertiesCount: 0, statusChangesCount: 0,
+              totPercanChangesCount: 0, legalStatusChangesCount: 0, foreclosedPropertiesCount: 0,
+              totalPropertiesInNewFile: 0, totalPropertiesInPreviousFile: 0
+            },
+            newProperties: [], removedProperties: [], foreclosedProperties: [],
+            statusChanges: [], totPercanChanges: [], legalStatusChanges: []
+          });
         }
       } catch (error) {
         console.log('No comparison report available:', error);
+        // Initialize with empty report on error
+        setComparisonReport({
+          summary: {
+            newPropertiesCount: 0, removedPropertiesCount: 0, statusChangesCount: 0,
+            totPercanChangesCount: 0, legalStatusChangesCount: 0, foreclosedPropertiesCount: 0,
+            totalPropertiesInNewFile: 0, totalPropertiesInPreviousFile: 0
+          },
+          newProperties: [], removedProperties: [], foreclosedProperties: [],
+          statusChanges: [], totPercanChanges: [], legalStatusChanges: []
+        });
       }
     } catch (error) {
       console.error('Error loading data:', error);
