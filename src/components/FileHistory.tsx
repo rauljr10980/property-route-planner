@@ -26,7 +26,7 @@ export default function FileHistory() {
   const [lastUploadDate, setLastUploadDate] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState<{ progress: number; message: string } | null>(null);
   const [comparisonReport, setComparisonReport] = useState<any>(null);
-  const [showComparisonReport, setShowComparisonReport] = useState(false);
+  const [showComparisonReport, setShowComparisonReport] = useState(true); // Default to showing the report
   const [changeFilter, setChangeFilter] = useState<'all' | 'status' | 'totpercan' | 'legalstatus'>('all');
 
   useEffect(() => {
@@ -594,12 +594,18 @@ export default function FileHistory() {
                     <p className="text-sm text-gray-800">
                       <strong>I've noticed that there are:</strong>
                       <br />
-                      • <strong>{comparisonReport.summary.statusChangesCount}</strong> properties with status changes (J/A/P)
-                      {comparisonReport.summary.totPercanChangesCount > 0 && (
-                        <> • <strong>{comparisonReport.summary.totPercanChangesCount}</strong> properties with TOT_PERCAN changes</>
+                      • <strong>{comparisonReport.summary?.statusChangesCount || 0}</strong> properties with status changes (J/A/P)
+                      {comparisonReport.summary?.totPercanChangesCount !== undefined && (
+                        <> • <strong>{comparisonReport.summary.totPercanChangesCount || 0}</strong> properties with TOT_PERCAN changes</>
                       )}
-                      {comparisonReport.summary.legalStatusChangesCount > 0 && (
-                        <> • <strong>{comparisonReport.summary.legalStatusChangesCount}</strong> properties with LEGALSTATUS field changes</>
+                      {comparisonReport.summary?.legalStatusChangesCount !== undefined && (
+                        <> • <strong>{comparisonReport.summary.legalStatusChangesCount || 0}</strong> properties with LEGALSTATUS field changes</>
+                      )}
+                      {(!comparisonReport.summary || 
+                        (comparisonReport.summary.statusChangesCount === 0 && 
+                         (comparisonReport.summary.totPercanChangesCount || 0) === 0 && 
+                         (comparisonReport.summary.legalStatusChangesCount || 0) === 0)) && (
+                        <span className="text-gray-500 italic"> (No changes detected in this upload)</span>
                       )}
                     </p>
                   </div>
@@ -624,22 +630,18 @@ export default function FileHistory() {
                         {comparisonReport.summary.statusChangesCount}
                       </div>
                     </div>
-                    {comparisonReport.summary.totPercanChangesCount > 0 && (
-                      <div className="bg-white p-4 rounded-lg border-2 border-orange-300">
-                        <div className="text-orange-600 font-semibold text-sm">TOT_PERCAN Changes</div>
-                        <div className="text-2xl font-bold text-orange-900">
-                          {comparisonReport.summary.totPercanChangesCount}
-                        </div>
+                    <div className="bg-white p-4 rounded-lg border-2 border-orange-300">
+                      <div className="text-orange-600 font-semibold text-sm">TOT_PERCAN Changes</div>
+                      <div className="text-2xl font-bold text-orange-900">
+                        {comparisonReport.summary?.totPercanChangesCount || 0}
                       </div>
-                    )}
-                    {comparisonReport.summary.legalStatusChangesCount > 0 && (
-                      <div className="bg-white p-4 rounded-lg border-2 border-purple-300">
-                        <div className="text-purple-600 font-semibold text-sm">LEGALSTATUS Changes</div>
-                        <div className="text-2xl font-bold text-purple-900">
-                          {comparisonReport.summary.legalStatusChangesCount}
-                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-lg border-2 border-purple-300">
+                      <div className="text-purple-600 font-semibold text-sm">LEGALSTATUS Changes</div>
+                      <div className="text-2xl font-bold text-purple-900">
+                        {comparisonReport.summary?.legalStatusChangesCount || 0}
                       </div>
-                    )}
+                    </div>
                     <div className="bg-white p-4 rounded-lg border-2 border-gray-300">
                       <div className="text-gray-600 font-semibold text-sm">Total Properties</div>
                       <div className="text-2xl font-bold text-gray-900">
@@ -672,30 +674,26 @@ export default function FileHistory() {
                       >
                         Status Changes ({comparisonReport.summary.statusChangesCount})
                       </button>
-                      {comparisonReport.summary.totPercanChangesCount > 0 && (
-                        <button
-                          onClick={() => setChangeFilter('totpercan')}
-                          className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-                            changeFilter === 'totpercan'
-                              ? 'bg-orange-600 text-white'
-                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                          }`}
-                        >
-                          TOT_PERCAN Changes ({comparisonReport.summary.totPercanChangesCount})
-                        </button>
-                      )}
-                      {comparisonReport.summary.legalStatusChangesCount > 0 && (
-                        <button
-                          onClick={() => setChangeFilter('legalstatus')}
-                          className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-                            changeFilter === 'legalstatus'
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                          }`}
-                        >
-                          LEGALSTATUS Changes ({comparisonReport.summary.legalStatusChangesCount})
-                        </button>
-                      )}
+                      <button
+                        onClick={() => setChangeFilter('totpercan')}
+                        className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                          changeFilter === 'totpercan'
+                            ? 'bg-orange-600 text-white'
+                            : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                        }`}
+                      >
+                        TOT_PERCAN Changes ({comparisonReport.summary?.totPercanChangesCount || 0})
+                      </button>
+                      <button
+                        onClick={() => setChangeFilter('legalstatus')}
+                        className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                          changeFilter === 'legalstatus'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                        }`}
+                      >
+                        LEGALSTATUS Changes ({comparisonReport.summary?.legalStatusChangesCount || 0})
+                      </button>
                     </div>
                   </div>
 
@@ -767,9 +765,9 @@ export default function FileHistory() {
                     )}
 
                     {/* Changes Table - Filtered by Change Type */}
-                    {((changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0) ||
-                     (changeFilter === 'totpercan' && comparisonReport.totPercanChanges && comparisonReport.totPercanChanges.length > 0) ||
-                     (changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0) ? (
+                    {((changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges) ||
+                     (changeFilter === 'totpercan' && comparisonReport.totPercanChanges) ||
+                     (changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges) ? (
                       <div className="bg-white rounded-lg border border-blue-300 p-4 col-span-full">
                         <div className="flex items-center justify-between mb-3">
                           <h4 className="font-bold text-blue-800">
@@ -813,7 +811,7 @@ export default function FileHistory() {
                             </thead>
                             <tbody className="divide-y divide-gray-200">
                               {/* Status Changes */}
-                              {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.map((sc: any, idx: number) => (
+                              {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && comparisonReport.statusChanges.map((sc: any, idx: number) => (
                                 <tr key={`status-${idx}`} className="hover:bg-blue-50">
                                   <td className="px-3 py-2 text-xs font-mono text-gray-900">
                                     {sc.CAN || sc.identifier}
@@ -859,7 +857,7 @@ export default function FileHistory() {
                               ))}
                               
                               {/* TOT_PERCAN Changes */}
-                              {changeFilter === 'totpercan' && comparisonReport.totPercanChanges && comparisonReport.totPercanChanges.map((tp: any, idx: number) => (
+                              {changeFilter === 'totpercan' && comparisonReport.totPercanChanges && comparisonReport.totPercanChanges.length > 0 && comparisonReport.totPercanChanges.map((tp: any, idx: number) => (
                                 <tr key={`totpercan-${idx}`} className="hover:bg-orange-50">
                                   <td className="px-3 py-2 text-xs font-mono text-gray-900">
                                     {tp.CAN || tp.identifier}
@@ -889,7 +887,7 @@ export default function FileHistory() {
                               ))}
                               
                               {/* LEGALSTATUS Changes */}
-                              {changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
+                              {changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0 && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
                                 <tr key={`legalstatus-${idx}`} className="hover:bg-purple-50">
                                   <td className="px-3 py-2 text-xs font-mono text-gray-900">
                                     {ls.CAN || ls.identifier}
@@ -912,7 +910,7 @@ export default function FileHistory() {
                               {/* All Changes Combined */}
                               {changeFilter === 'all' && (
                                 <>
-                                  {comparisonReport.totPercanChanges && comparisonReport.totPercanChanges.map((tp: any, idx: number) => (
+                                  {comparisonReport.totPercanChanges && comparisonReport.totPercanChanges.length > 0 && comparisonReport.totPercanChanges.map((tp: any, idx: number) => (
                                     <tr key={`all-totpercan-${idx}`} className="hover:bg-orange-50">
                                       <td className="px-3 py-2 text-xs font-mono text-gray-900">
                                         {tp.CAN || tp.identifier}
@@ -928,7 +926,7 @@ export default function FileHistory() {
                                       </td>
                                     </tr>
                                   ))}
-                                  {comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
+                                  {comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0 && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
                                     <tr key={`all-legalstatus-${idx}`} className="hover:bg-purple-50">
                                       <td className="px-3 py-2 text-xs font-mono text-gray-900">
                                         {ls.CAN || ls.identifier}
@@ -946,11 +944,26 @@ export default function FileHistory() {
                                   ))}
                                 </>
                               )}
+                              
+                              {/* No Changes Message */}
+                              {((changeFilter === 'all' || changeFilter === 'status') && (!comparisonReport.statusChanges || comparisonReport.statusChanges.length === 0)) ||
+                               (changeFilter === 'totpercan' && (!comparisonReport.totPercanChanges || comparisonReport.totPercanChanges.length === 0)) ||
+                               (changeFilter === 'legalstatus' && (!comparisonReport.legalStatusChanges || comparisonReport.legalStatusChanges.length === 0)) ? (
+                                <tr>
+                                  <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500 italic">
+                                    No {changeFilter === 'status' ? 'status' : changeFilter === 'totpercan' ? 'TOT_PERCAN' : changeFilter === 'legalstatus' ? 'LEGALSTATUS' : ''} changes detected in this upload.
+                                  </td>
+                                </tr>
+                              ) : null}
                             </tbody>
                           </table>
                         </div>
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="bg-white rounded-lg border border-gray-300 p-8 col-span-full text-center">
+                        <p className="text-gray-500 italic">No comparison data available. Upload a file to generate a comparison report.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
