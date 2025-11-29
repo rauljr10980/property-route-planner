@@ -636,7 +636,7 @@ export default function FileHistory() {
                   )}
 
                   {/* Sample Changes */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* New Properties Sample */}
                     {comparisonReport.newProperties && comparisonReport.newProperties.length > 0 && (
                       <div className="bg-white rounded-lg border border-green-300 p-4">
@@ -683,25 +683,72 @@ export default function FileHistory() {
                       </div>
                     )}
 
-                    {/* Status Changes Sample */}
+                    {/* Status Changes - Full List */}
                     {comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && (
-                      <div className="bg-white rounded-lg border border-blue-300 p-4">
-                        <h4 className="font-bold text-blue-800 mb-2">Status Changes (Sample)</h4>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {comparisonReport.statusChanges.slice(0, 5).map((sc: any, idx: number) => (
-                            <div key={idx} className="text-xs p-2 bg-blue-50 rounded">
-                              <div className="font-semibold">CAN: {sc.CAN || sc.identifier}</div>
-                              <div className="text-gray-600 truncate">{sc.address}</div>
-                              <div className="text-blue-700 font-semibold">
-                                {sc.oldStatus || 'NEW'} → {sc.newStatus}
-                              </div>
-                            </div>
-                          ))}
-                          {comparisonReport.statusChanges.length > 5 && (
-                            <div className="text-xs text-gray-500 italic">
-                              +{comparisonReport.statusChanges.length - 5} more...
-                            </div>
-                          )}
+                      <div className="bg-white rounded-lg border border-blue-300 p-4 col-span-full">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-bold text-blue-800">
+                            All Properties with Status Changes ({comparisonReport.statusChanges.length})
+                          </h4>
+                          <p className="text-xs text-gray-500">
+                            💡 Tip: Go to Dashboard tab to see full property details and filter by status type
+                          </p>
+                        </div>
+                        <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-blue-50 sticky top-0">
+                              <tr>
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">CAN</th>
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Address</th>
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Previous Status</th>
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">New Status</th>
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Change Type</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {comparisonReport.statusChanges.map((sc: any, idx: number) => (
+                                <tr key={idx} className="hover:bg-blue-50">
+                                  <td className="px-3 py-2 text-xs font-mono text-gray-900">
+                                    {sc.CAN || sc.identifier}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={sc.address}>
+                                    {sc.address}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    {sc.oldStatus ? (
+                                      <span className={`px-2 py-1 text-xs font-medium rounded ${
+                                        sc.oldStatus === 'J' ? 'bg-red-100 text-red-800' :
+                                        sc.oldStatus === 'A' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-blue-100 text-blue-800'
+                                      }`}>
+                                        {sc.oldStatus === 'J' ? 'Judgment (J)' :
+                                         sc.oldStatus === 'A' ? 'Active (A)' :
+                                         'Pending (P)'}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">NEW</span>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <span className={`px-2 py-1 text-xs font-medium rounded ${
+                                      sc.newStatus === 'J' ? 'bg-red-100 text-red-800' :
+                                      sc.newStatus === 'A' ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-blue-100 text-blue-800'
+                                    }`}>
+                                      {sc.newStatus === 'J' ? 'Judgment (J)' :
+                                       sc.newStatus === 'A' ? 'Active (A)' :
+                                       'Pending (P)'}
+                                    </span>
+                                  </td>
+                                  <td className="px-3 py-2">
+                                    <span className="text-xs font-semibold text-blue-700">
+                                      {sc.changeType}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       </div>
                     )}
