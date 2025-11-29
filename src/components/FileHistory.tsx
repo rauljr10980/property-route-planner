@@ -653,7 +653,27 @@ export default function FileHistory() {
 
                   {/* Filter Buttons */}
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h4 className="font-bold text-gray-800 mb-3">Filter by Change Type</h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-bold text-gray-800">Filter by Change Type</h4>
+                      {/* Previous Status Dropdown - Only show for status changes */}
+                      {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport && comparisonReport.statusChanges !== undefined && (
+                        <div className="relative">
+                          <label className="text-xs font-semibold text-gray-700 mr-2">Previous Status:</label>
+                          <select
+                            value={previousStatusFilter}
+                            onChange={(e) => setPreviousStatusFilter(e.target.value as 'all' | 'J' | 'A' | 'P' | 'new')}
+                            className="px-4 py-2 rounded-md text-sm font-semibold bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer pr-8"
+                          >
+                            <option value="all">All Properties</option>
+                            <option value="J">Judgment (J)</option>
+                            <option value="A">Active (A)</option>
+                            <option value="P">Pending (P)</option>
+                            <option value="new">New (No Previous Status)</option>
+                          </select>
+                          <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none w-4 h-4" />
+                        </div>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-2 items-center">
                       <button
                         onClick={() => setChangeFilter('all')}
@@ -695,25 +715,6 @@ export default function FileHistory() {
                       >
                         LEGALSTATUS Changes ({comparisonReport.summary?.legalStatusChangesCount || 0})
                       </button>
-                      
-                      {/* Previous Status Dropdown - Only show for status changes */}
-                      {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && (
-                        <div className="relative ml-auto">
-                          <label className="text-xs font-semibold text-gray-700 mr-2">Filter by Previous Status:</label>
-                          <select
-                            value={previousStatusFilter}
-                            onChange={(e) => setPreviousStatusFilter(e.target.value as 'all' | 'J' | 'A' | 'P' | 'new')}
-                            className="px-4 py-2 rounded-md text-sm font-semibold bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer pr-8"
-                          >
-                            <option value="all">All Properties</option>
-                            <option value="J">Judgment (J)</option>
-                            <option value="A">Active (A)</option>
-                            <option value="P">Pending (P)</option>
-                            <option value="new">New (No Previous Status)</option>
-                          </select>
-                          <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none w-4 h-4" />
-                        </div>
-                      )}
                     </div>
                   </div>
 
