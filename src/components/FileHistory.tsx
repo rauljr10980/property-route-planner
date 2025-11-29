@@ -653,16 +653,16 @@ export default function FileHistory() {
 
                   {/* Filter Buttons */}
                   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
                       <h4 className="font-bold text-gray-800">Filter by Change Type</h4>
                       {/* Previous Status Dropdown - Only show for status changes */}
-                      {comparisonReport && (changeFilter === 'all' || changeFilter === 'status') && (
-                        <div className="relative">
-                          <label className="text-xs font-semibold text-gray-700 mr-2">Previous Status:</label>
+                      {(changeFilter === 'all' || changeFilter === 'status') && (
+                        <div className="relative flex items-center gap-2">
+                          <label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Previous Status:</label>
                           <select
                             value={previousStatusFilter}
                             onChange={(e) => setPreviousStatusFilter(e.target.value as 'all' | 'J' | 'A' | 'P' | 'new')}
-                            className="px-4 py-2 rounded-md text-sm font-semibold bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer pr-8"
+                            className="px-4 py-2 rounded-md text-sm font-semibold bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer pr-8 min-w-[180px]"
                           >
                             <option value="all">All Properties</option>
                             <option value="J">Judgment (J)</option>
