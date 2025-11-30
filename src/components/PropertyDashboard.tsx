@@ -510,46 +510,10 @@ export default function PropertyDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="max-w-7xl mx-auto">
-        {properties.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <AlertCircle className="mx-auto mb-4 text-gray-400" size={48} />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No Data Yet</h3>
-            <p className="text-gray-600 mb-4">
-              Upload property data in the File History tab to see your dashboard
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-                <div className="text-sm text-gray-600 mb-1">Total Properties</div>
-                <div className="text-3xl font-bold text-gray-900">{properties.length}</div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
-                <div className="text-sm text-gray-600 mb-1">Judgment (J)</div>
-                <div className="text-3xl font-bold text-red-600">
-                  {properties.filter(p => getPropertyStatus(p) === 'J').length}
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
-                <div className="text-sm text-gray-600 mb-1">Active (A)</div>
-                <div className="text-3xl font-bold text-yellow-600">
-                  {properties.filter(p => getPropertyStatus(p) === 'A').length}
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-                <div className="text-sm text-gray-600 mb-1">Pending (P)</div>
-                <div className="text-3xl font-bold text-blue-600">
-                  {properties.filter(p => getPropertyStatus(p) === 'P').length}
-                </div>
-              </div>
-            </div>
-
-            {/* Comparison Report Section */}
-            {comparisonReport ? (
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200 p-6 mb-6">
-                <div className="flex items-center justify-between mb-4">
+        {/* Comparison Report Section - Always visible at the top */}
+        {comparisonReport && (
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200 p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <TrendingUp className="text-purple-600" size={24} />
                     <div>
@@ -567,8 +531,8 @@ export default function PropertyDashboard() {
                   </button>
                 </div>
 
-                {showComparisonReport && (
-                  <div className="space-y-4">
+            {showComparisonReport && (
+              <div className="space-y-4">
                     {/* Summary Message */}
                     <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
                       <p className="text-sm text-gray-800">
@@ -948,10 +912,46 @@ export default function PropertyDashboard() {
                         </div>
                       </div>
                     ) : null}
-                  </div>
-                )}
               </div>
             )}
+          </div>
+        )}
+
+        {properties.length === 0 ? (
+          <div className="bg-white rounded-lg shadow-md p-12 text-center">
+            <AlertCircle className="mx-auto mb-4 text-gray-400" size={48} />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">No Data Yet</h3>
+            <p className="text-gray-600 mb-4">
+              Upload property data in the File History tab to see your dashboard
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                <div className="text-sm text-gray-600 mb-1">Total Properties</div>
+                <div className="text-3xl font-bold text-gray-900">{properties.length}</div>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
+                <div className="text-sm text-gray-600 mb-1">Judgment (J)</div>
+                <div className="text-3xl font-bold text-red-600">
+                  {properties.filter(p => getPropertyStatus(p) === 'J').length}
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+                <div className="text-sm text-gray-600 mb-1">Active (A)</div>
+                <div className="text-3xl font-bold text-yellow-600">
+                  {properties.filter(p => getPropertyStatus(p) === 'A').length}
+                </div>
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                <div className="text-sm text-gray-600 mb-1">Pending (P)</div>
+                <div className="text-3xl font-bold text-blue-600">
+                  {properties.filter(p => getPropertyStatus(p) === 'P').length}
+                </div>
+              </div>
+            </div>
 
             {/* Status Changes Panel */}
             {properties.length > 0 && (
