@@ -44,6 +44,7 @@ export default function PropertyDashboard() {
   const [showComparisonReport, setShowComparisonReport] = useState(true);
   const [changeFilter, setChangeFilter] = useState<'all' | 'status' | 'totpercan' | 'legalstatus'>('all');
   const [previousStatusFilter, setPreviousStatusFilter] = useState<'all' | 'J' | 'A' | 'P' | 'new'>('all');
+  const [selectedBreakdownTransition, setSelectedBreakdownTransition] = useState<string | null>(null); // For filtering by clicked transition
   const [mapCenter, setMapCenter] = useState({ lat: 29.4241, lng: -98.4936 });
   const [mapZoom, setMapZoom] = useState(11);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -516,9 +517,6 @@ export default function PropertyDashboard() {
                         <strong>I've noticed that there are:</strong>
                         <br />
                         • <strong>{comparisonReport.summary?.statusChangesCount || 0}</strong> properties with status changes (J/A/P)
-                        {comparisonReport.summary?.totPercanChangesCount !== undefined && (
-                          <> • <strong>{comparisonReport.summary.totPercanChangesCount || 0}</strong> properties with TOT_PERCAN changes</>
-                        )}
                         {comparisonReport.summary?.legalStatusChangesCount !== undefined && (
                           <> • <strong>{comparisonReport.summary.legalStatusChangesCount || 0}</strong> properties with LEGALSTATUS field changes</>
                         )}
@@ -527,7 +525,6 @@ export default function PropertyDashboard() {
                         )}
                         {(!comparisonReport.summary || 
                           (comparisonReport.summary.statusChangesCount === 0 && 
-                           (comparisonReport.summary.totPercanChangesCount || 0) === 0 && 
                            (comparisonReport.summary.legalStatusChangesCount || 0) === 0)) && (
                           <span className="text-gray-500 italic"> (No changes detected in this upload)</span>
                         )}
@@ -535,7 +532,7 @@ export default function PropertyDashboard() {
                     </div>
 
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                       <div className="bg-white p-4 rounded-lg border-2 border-green-300">
                         <div className="text-green-600 font-semibold text-sm">New Properties</div>
                         <div className="text-2xl font-bold text-green-900">
@@ -557,12 +554,6 @@ export default function PropertyDashboard() {
                         <div className="text-blue-600 font-semibold text-sm">Status Changes</div>
                         <div className="text-2xl font-bold text-blue-900">
                           {comparisonReport.summary?.statusChangesCount || 0}
-                        </div>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg border-2 border-orange-300">
-                        <div className="text-orange-600 font-semibold text-sm">TOT_PERCAN Changes</div>
-                        <div className="text-2xl font-bold text-orange-900">
-                          {comparisonReport.summary?.totPercanChangesCount || 0}
                         </div>
                       </div>
                       <div className="bg-white p-4 rounded-lg border-2 border-purple-300">
@@ -604,19 +595,71 @@ export default function PropertyDashboard() {
                     {/* Status Change Breakdown */}
                     {comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && (
                       <div className="bg-white rounded-lg border border-gray-200 p-4">
-                        <h4 className="font-bold text-gray-800 mb-3">Status Change Breakdown</h4>
+                        <h4 className="font-bold text-gray-800 mb-3">Status Change Breakdown (Click to filter)</h4>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                          {['P→A', 'P→J', 'A→J', 'A→P', 'J→A', 'J→P', 'NEW→J', 'NEW→A', 'NEW→P'].map(changeType => {
-                            const count = comparisonReport.statusChanges.filter((sc: any) => sc.changeType === changeType).length;
-                            if (count === 0) return null;
-                            return (
-                              <div key={changeType} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                                <span className="font-semibold text-gray-700">{changeType}:</span>
-                                <span className="font-bold text-gray-900">{count}</span>
-                              </div>
-                            );
-                          })}
+                          {(() => {
+                            // Get all unique changeTypes from actual data
+                            const changeTypeCounts: { [key: string]: number } = {};
+                            comparisonReport.statusChanges.forEach((sc: any) => {
+                              const changeType = sc.changeType || `${sc.oldStatus || 'Blank'}→${sc.newStatus || 'Blank'}`;
+                              changeTypeCounts[changeType] = (changeTypeCounts[changeType] || 0) + 1;
+                            });
+                            
+                            // Sort by count (descending) then by type
+                            const sortedTypes = Object.entries(changeTypeCounts)
+                              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+                            
+                            return sortedTypes.map(([changeType, count]) => (
+                              <button
+                                key={changeType}
+                                onClick={() => {
+                                  if (selectedBreakdownTransition === changeType) {
+                                    setSelectedBreakdownTransition(null);
+                                    setTransitionFilter(null);
+                                  } else {
+                                    setSelectedBreakdownTransition(changeType);
+                                    // Map changeType to transitionFilter format
+                                    if (changeType === 'P→A') setTransitionFilter('p-to-a');
+                                    else if (changeType === 'A→J') setTransitionFilter('a-to-j');
+                                    else if (changeType.startsWith('NEW→') || changeType.startsWith('Blank→')) {
+                                      if (changeType.includes('→P')) setTransitionFilter('blank-to-p');
+                                      else setTransitionFilter(null);
+                                    } else {
+                                      // For other transitions, set a custom filter
+                                      setTransitionFilter(changeType.toLowerCase().replace('→', '-to-') as any);
+                                    }
+                                  }
+                                }}
+                                className={`flex justify-between items-center p-2 rounded transition-all ${
+                                  selectedBreakdownTransition === changeType
+                                    ? 'bg-purple-600 text-white shadow-md'
+                                    : 'bg-gray-50 hover:bg-gray-100'
+                                }`}
+                              >
+                                <span className={`font-semibold ${selectedBreakdownTransition === changeType ? 'text-white' : 'text-gray-700'}`}>
+                                  {changeType}:
+                                </span>
+                                <span className={`font-bold ${selectedBreakdownTransition === changeType ? 'text-white' : 'text-gray-900'}`}>
+                                  {count}
+                                </span>
+                              </button>
+                            ));
+                          })()}
                         </div>
+                        {selectedBreakdownTransition && (
+                          <div className="mt-3 text-xs text-gray-600">
+                            Showing properties with transition: <strong>{selectedBreakdownTransition}</strong>
+                            <button
+                              onClick={() => {
+                                setSelectedBreakdownTransition(null);
+                                setTransitionFilter(null);
+                              }}
+                              className="ml-2 text-purple-600 hover:text-purple-800 underline"
+                            >
+                              Clear filter
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
