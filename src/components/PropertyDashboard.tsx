@@ -250,9 +250,23 @@ export default function PropertyDashboard() {
           (c.newStatus ? `NEW→${c.newStatus}` : 'REMOVED_STATUS') :
           (c.newStatus === 'Blank' || c.newStatus === null ? 'REMOVED_STATUS' : changeType);
         
-        // Normalize: remove spaces
+        // Normalize: remove spaces from both
         const normalizedSelected = selectedBreakdownTransition.replace(/\s+/g, '');
-        return normalizedChangeType === normalizedSelected || changeType === normalizedSelected;
+        const normalizedChangeTypeNoSpaces = normalizedChangeType.replace(/\s+/g, '');
+        const changeTypeNoSpaces = changeType.replace(/\s+/g, '');
+        
+        // Match: "NEW→P" or "Blank→P" from comparison report should match "Blank→P" from getStatusChanges
+        // Also handle case where comparison report might use "Blank→P" instead of "NEW→P"
+        if (normalizedSelected.startsWith('NEW→') && (c.oldStatus === 'Blank' || c.oldStatus === null)) {
+          // Match "NEW→P" with "Blank→P"
+          return normalizedSelected.replace('NEW→', '') === c.newStatus;
+        }
+        if (normalizedSelected.startsWith('Blank→') && (c.oldStatus === 'Blank' || c.oldStatus === null)) {
+          // Match "Blank→P" with "Blank→P"
+          return normalizedSelected === changeTypeNoSpaces;
+        }
+        
+        return normalizedChangeTypeNoSpaces === normalizedSelected || changeTypeNoSpaces === normalizedSelected;
       });
     }
     
