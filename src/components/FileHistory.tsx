@@ -30,7 +30,6 @@ export default function FileHistory() {
     const initialize = async () => {
       await loadFileHistory();
       await loadSharedData();
-      await loadComparisonReport();
     };
     initialize();
     
@@ -407,7 +406,6 @@ export default function FileHistory() {
         }
 
           // Load comparison report
-          await loadComparisonReport();
 
           setProcessingProgress(null);
 
@@ -447,7 +445,6 @@ export default function FileHistory() {
         }
 
         // Load comparison report
-        await loadComparisonReport();
 
         setProcessingProgress(null);
 
