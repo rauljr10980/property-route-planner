@@ -873,14 +873,18 @@ export default function PropertyDashboard() {
                                 </tr>
                               ))
                             )
-                          ) : getFilteredStatusChanges().length === 0 ? (
-                            <tr>
-                              <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
-                                No properties match the selected filters.
-                              </td>
-                            </tr>
-                          ) : (
-                            getFilteredStatusChanges().map((change, idx) => {
+                          ) : (() => {
+                            const paginated = getPaginatedStatusChanges();
+                            if (paginated.total === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
+                                    No properties match the selected filters.
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            return paginated.items.map((change, idx) => {
                             const prop = change.property;
                             const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
                             const pnumber = prop.Pnumber || prop['Pnumber'] || '';
@@ -946,10 +950,83 @@ export default function PropertyDashboard() {
                                 </td>
                               </tr>
                             );
-                          })
-                          )}
+                            });
+                          })()}
                         </tbody>
                       </table>
+                      
+                      {/* Pagination Controls */}
+                      {(() => {
+                        const paginated = getPaginatedStatusChanges();
+                        if (paginated.totalPages <= 1) return null;
+                        
+                        return (
+                          <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-4">
+                            <div className="flex items-center gap-2 text-sm text-gray-700">
+                              <span>
+                                Showing <strong>{(paginated.currentPage - 1) * statusChangesPerPage + 1}</strong> to{' '}
+                                <strong>{Math.min(paginated.currentPage * statusChangesPerPage, paginated.total)}</strong> of{' '}
+                                <strong>{paginated.total.toLocaleString()}</strong> properties
+                              </span>
+                              <span className="text-gray-400">|</span>
+                              <span>
+                                Page <strong>{paginated.currentPage}</strong> of <strong>{paginated.totalPages}</strong>
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setStatusChangesPage(p => Math.max(1, p - 1)))}
+                                disabled={paginated.currentPage === 1}
+                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                                  paginated.currentPage === 1
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >
+                                Previous
+                              </button>
+                              <div className="flex gap-1">
+                                {Array.from({ length: Math.min(5, paginated.totalPages) }, (_, i) => {
+                                  let pageNum;
+                                  if (paginated.totalPages <= 5) {
+                                    pageNum = i + 1;
+                                  } else if (paginated.currentPage <= 3) {
+                                    pageNum = i + 1;
+                                  } else if (paginated.currentPage >= paginated.totalPages - 2) {
+                                    pageNum = paginated.totalPages - 4 + i;
+                                  } else {
+                                    pageNum = paginated.currentPage - 2 + i;
+                                  }
+                                  return (
+                                    <button
+                                      key={pageNum}
+                                      onClick={() => setStatusChangesPage(pageNum)}
+                                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                                        paginated.currentPage === pageNum
+                                          ? 'bg-indigo-600 text-white'
+                                          : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      {pageNum}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <button
+                                onClick={() => setStatusChangesPage(p => Math.min(paginated.totalPages, p + 1))}
+                                disabled={paginated.currentPage === paginated.totalPages}
+                                className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                                  paginated.currentPage === paginated.totalPages
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                    : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
