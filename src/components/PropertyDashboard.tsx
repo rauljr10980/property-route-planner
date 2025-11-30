@@ -650,6 +650,32 @@ export default function PropertyDashboard() {
                       </div>
                     )}
 
+                    {/* Removed Properties Sample */}
+                    {comparisonReport.removedProperties && comparisonReport.removedProperties.length > 0 && (
+                      <div className="bg-white rounded-lg border border-red-300 p-4">
+                        <h4 className="font-bold text-red-800 mb-2">Removed Properties (Sample)</h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {comparisonReport.removedProperties
+                            .filter((rp: any) => !rp.isForeclosed) // Exclude foreclosed (already shown above)
+                            .slice(0, 5)
+                            .map((rp: any, idx: number) => (
+                            <div key={idx} className="text-xs p-2 bg-red-50 rounded">
+                              <div className="font-semibold">CAN: {rp.CAN || rp.identifier}</div>
+                              <div className="text-gray-600 truncate">{rp.address}</div>
+                              {rp.previousStatus && (
+                                <div className="text-red-700 font-semibold">Was: {rp.previousStatus}</div>
+                              )}
+                            </div>
+                          ))}
+                          {comparisonReport.removedProperties.filter((rp: any) => !rp.isForeclosed).length > 5 && (
+                            <div className="text-xs text-gray-500 italic">
+                              +{comparisonReport.removedProperties.filter((rp: any) => !rp.isForeclosed).length - 5} more...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Filter by Change Type */}
                     <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                       <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
@@ -780,6 +806,9 @@ export default function PropertyDashboard() {
                             {changeFilter === 'legalstatus' && `LEGALSTATUS Changes (${comparisonReport.legalStatusChanges.length})`}
                             {changeFilter === 'all' && `All Changes (${comparisonReport.statusChanges.length + (comparisonReport.legalStatusChanges?.length || 0)})`}
                           </h4>
+                          <p className="text-xs text-gray-500">
+                            💡 Tip: Go to Dashboard tab to see full property details
+                          </p>
                         </div>
                         <div className="overflow-x-auto max-h-96 overflow-y-auto">
                           <table className="w-full text-sm">
