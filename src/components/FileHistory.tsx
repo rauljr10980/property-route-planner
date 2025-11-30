@@ -25,10 +25,6 @@ export default function FileHistory() {
   const [sharedProperties, setSharedProperties] = useState<Property[]>([]);
   const [lastUploadDate, setLastUploadDate] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState<{ progress: number; message: string } | null>(null);
-  const [comparisonReport, setComparisonReport] = useState<any>(null);
-  const [showComparisonReport, setShowComparisonReport] = useState(true); // Default to showing the report
-  const [changeFilter, setChangeFilter] = useState<'all' | 'status' | 'totpercan' | 'legalstatus'>('all');
-  const [previousStatusFilter, setPreviousStatusFilter] = useState<'all' | 'J' | 'A' | 'P' | 'new'>('all');
 
   useEffect(() => {
     const initialize = async () => {
@@ -41,7 +37,6 @@ export default function FileHistory() {
     // Listen for property updates
     const handlePropertiesUpdated = (event: CustomEvent) => {
       loadSharedData();
-      loadComparisonReport();
     };
     
     window.addEventListener('propertiesUpdated', handlePropertiesUpdated as EventListener);
@@ -50,16 +45,6 @@ export default function FileHistory() {
     };
   }, []);
 
-  const loadComparisonReport = async () => {
-    try {
-      const result = await gcsStorage.loadComparisonReport();
-      if (result) {
-        setComparisonReport(result.report);
-      }
-    } catch (error) {
-      console.error('Error loading comparison report:', error);
-    }
-  };
 
   const loadSharedData = async () => {
     try {
@@ -247,8 +232,6 @@ export default function FileHistory() {
         await saveSharedProperties(mergedProperties, uploadDate);
       }
 
-      // Load comparison report after processing
-      await loadComparisonReport();
 
       // Convert file to base64 for storage in history (fallback)
       const fileData = await fileToBase64(file);
@@ -630,35 +613,10 @@ export default function FileHistory() {
           </div>
           </div>
 
-          {/* Comparison Report */}
-          {comparisonReport && (
-            <div className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="text-purple-600" size={24} />
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900">File Comparison Report</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Changes detected between previous file and latest upload
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowComparisonReport(!showComparisonReport)}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
-                >
-                  {showComparisonReport ? 'Hide' : 'Show'} Report
-                </button>
-              </div>
-
-              {showComparisonReport && (
-                <div className="space-y-4">
-                  {/* Summary Message */}
-                  <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-                    <p className="text-sm text-gray-800">
-                      <strong>I've noticed that there are:</strong>
-                      <br />
-                      • <strong>{comparisonReport.summary?.statusChangesCount || 0}</strong> properties with status changes (J/A/P)
+          {/* File List */}
+        {filteredFiles.length > 0 ? (
+          <div className="space-y-4">
+            {filteredFiles.map((file) => (
                       {comparisonReport.summary?.totPercanChangesCount !== undefined && (
                         <> • <strong>{comparisonReport.summary.totPercanChangesCount || 0}</strong> properties with TOT_PERCAN changes</>
                       )}
