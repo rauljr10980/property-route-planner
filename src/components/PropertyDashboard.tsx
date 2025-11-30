@@ -642,6 +642,63 @@ export default function PropertyDashboard() {
                       </div>
                     )}
 
+                    {/* Filter by Change Type */}
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
+                        <h4 className="font-bold text-gray-800">Filter by Change Type</h4>
+                        {/* Previous Status Dropdown - Only show for status changes */}
+                        {(changeFilter === 'all' || changeFilter === 'status') && (
+                          <div className="relative flex items-center gap-2">
+                            <label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Previous Status:</label>
+                            <select
+                              value={previousStatusFilter}
+                              onChange={(e) => setPreviousStatusFilter(e.target.value as 'all' | 'J' | 'A' | 'P' | 'new')}
+                              className="px-4 py-2 rounded-md text-sm font-semibold bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer pr-8 min-w-[180px]"
+                            >
+                              <option value="all">All Properties</option>
+                              <option value="J">Judgment (J)</option>
+                              <option value="A">Active (A)</option>
+                              <option value="P">Pending (P)</option>
+                              <option value="new">New (No Previous Status)</option>
+                            </select>
+                            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none w-4 h-4" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-2 items-center">
+                        <button
+                          onClick={() => setChangeFilter('all')}
+                          className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                            changeFilter === 'all'
+                              ? 'bg-indigo-600 text-white'
+                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                          }`}
+                        >
+                          All Changes ({comparisonReport.summary.statusChangesCount + (comparisonReport.summary.legalStatusChangesCount || 0)})
+                        </button>
+                        <button
+                          onClick={() => setChangeFilter('status')}
+                          className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                            changeFilter === 'status'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                          }`}
+                        >
+                          Status Changes ({comparisonReport.summary.statusChangesCount})
+                        </button>
+                        <button
+                          onClick={() => setChangeFilter('legalstatus')}
+                          className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
+                            changeFilter === 'legalstatus'
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                          }`}
+                        >
+                          LEGALSTATUS Changes ({comparisonReport.summary?.legalStatusChangesCount || 0})
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Status Change Breakdown */}
                     {comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && (
                       <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -704,6 +761,156 @@ export default function PropertyDashboard() {
                         )}
                       </div>
                     )}
+
+                    {/* Changes Table - Filtered by Change Type */}
+                    {((changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges) ||
+                     (changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges) ? (
+                      <div className="bg-white rounded-lg border border-blue-300 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-bold text-blue-800">
+                            {changeFilter === 'status' && `Status Changes (${comparisonReport.statusChanges.length})`}
+                            {changeFilter === 'legalstatus' && `LEGALSTATUS Changes (${comparisonReport.legalStatusChanges.length})`}
+                            {changeFilter === 'all' && `All Changes (${comparisonReport.statusChanges.length + (comparisonReport.legalStatusChanges?.length || 0)})`}
+                          </h4>
+                        </div>
+                        <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                          <table className="w-full text-sm">
+                            <thead className="bg-blue-50 sticky top-0">
+                              <tr>
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">CAN</th>
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Address</th>
+                                {changeFilter === 'status' || changeFilter === 'all' ? (
+                                  <>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Previous Status</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">New Status</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Change Type</th>
+                                  </>
+                                ) : null}
+                                {changeFilter === 'legalstatus' ? (
+                                  <>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Old LEGALSTATUS</th>
+                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">New LEGALSTATUS</th>
+                                  </>
+                                ) : null}
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Summary</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
+                              {/* Status Changes */}
+                              {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && comparisonReport.statusChanges
+                                .filter((sc: any) => {
+                                  if (previousStatusFilter === 'all') return true;
+                                  if (previousStatusFilter === 'new') return sc.oldStatus === null;
+                                  return sc.oldStatus === previousStatusFilter;
+                                })
+                                .map((sc: any, idx: number) => (
+                                <tr key={`status-${idx}`} className="hover:bg-blue-50">
+                                  <td className="px-3 py-2 text-xs font-mono text-gray-900">
+                                    {sc.CAN || sc.identifier}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={sc.address}>
+                                    {sc.address}
+                                  </td>
+                                  {changeFilter === 'status' || changeFilter === 'all' ? (
+                                    <>
+                                      <td className="px-3 py-2">
+                                        {sc.oldStatus ? (
+                                          <span className={`px-2 py-1 text-xs font-medium rounded ${
+                                            sc.oldStatus === 'J' ? 'bg-red-100 text-red-800' :
+                                            sc.oldStatus === 'A' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-blue-100 text-blue-800'
+                                          }`}>
+                                            {sc.oldStatus === 'J' ? 'Judgment (J)' :
+                                             sc.oldStatus === 'A' ? 'Active (A)' :
+                                             'Pending (P)'}
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs text-gray-400">NEW</span>
+                                        )}
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        <span className={`px-2 py-1 text-xs font-medium rounded ${
+                                          sc.newStatus === 'J' ? 'bg-red-100 text-red-800' :
+                                          sc.newStatus === 'A' ? 'bg-yellow-100 text-yellow-800' :
+                                          'bg-blue-100 text-blue-800'
+                                        }`}>
+                                          {sc.newStatus === 'J' ? 'Judgment (J)' :
+                                           sc.newStatus === 'A' ? 'Active (A)' :
+                                           'Pending (P)'}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        <span className="text-xs font-semibold text-blue-700">
+                                          {sc.changeType}
+                                        </span>
+                                      </td>
+                                    </>
+                                  ) : null}
+                                  <td className="px-3 py-2 text-xs text-gray-600 italic">
+                                    {changeFilter === 'status' || changeFilter === 'all' 
+                                      ? `Status changed from ${sc.oldStatus || 'NEW'} to ${sc.newStatus}`
+                                      : ''}
+                                  </td>
+                                </tr>
+                              ))}
+                              
+                              {/* LEGALSTATUS Changes */}
+                              {changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0 && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
+                                <tr key={`legalstatus-${idx}`} className="hover:bg-purple-50">
+                                  <td className="px-3 py-2 text-xs font-mono text-gray-900">
+                                    {ls.CAN || ls.identifier}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={ls.address}>
+                                    {ls.address}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-700">
+                                    {ls.oldLegalStatus || 'N/A'}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-700">
+                                    {ls.newLegalStatus || 'N/A'}
+                                  </td>
+                                  <td className="px-3 py-2 text-xs text-gray-600 italic">
+                                    LEGALSTATUS changed from "{ls.oldLegalStatus || 'N/A'}" to "{ls.newLegalStatus || 'N/A'}"
+                                  </td>
+                                </tr>
+                              ))}
+                              
+                              {/* All Changes Combined */}
+                              {changeFilter === 'all' && (
+                                <>
+                                  {comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0 && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
+                                    <tr key={`all-legalstatus-${idx}`} className="hover:bg-purple-50">
+                                      <td className="px-3 py-2 text-xs font-mono text-gray-900">
+                                        {ls.CAN || ls.identifier}
+                                      </td>
+                                      <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={ls.address}>
+                                        {ls.address}
+                                      </td>
+                                      <td colSpan={3} className="px-3 py-2 text-xs text-gray-500 italic">
+                                        LEGALSTATUS Change
+                                      </td>
+                                      <td className="px-3 py-2 text-xs text-gray-600 italic">
+                                        LEGALSTATUS: "{ls.oldLegalStatus || 'N/A'}" → "{ls.newLegalStatus || 'N/A'}"
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </>
+                              )}
+                              
+                              {/* No Changes Message */}
+                              {((changeFilter === 'all' || changeFilter === 'status') && (!comparisonReport.statusChanges || comparisonReport.statusChanges.length === 0)) ||
+                               (changeFilter === 'legalstatus' && (!comparisonReport.legalStatusChanges || comparisonReport.legalStatusChanges.length === 0)) ? (
+                                <tr>
+                                  <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500 italic">
+                                    No {changeFilter === 'status' ? 'status' : changeFilter === 'legalstatus' ? 'LEGALSTATUS' : ''} changes detected in this upload.
+                                  </td>
+                                </tr>
+                              ) : null}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>
