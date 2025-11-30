@@ -253,6 +253,15 @@ export default function PropertyDashboard() {
     // Filter by breakdown transition (from comparison report changeType format like "P→A")
     if (selectedBreakdownTransition) {
       allChanges = allChanges.filter(c => {
+        // Normalize: remove spaces from selected transition
+        const normalizedSelected = selectedBreakdownTransition.replace(/\s+/g, '');
+        
+        // Handle case where changeType is just "NEW" (without target status)
+        // This means all new properties (oldStatus is Blank/null)
+        if (normalizedSelected === 'NEW' && (c.oldStatus === 'Blank' || c.oldStatus === null)) {
+          return true;
+        }
+        
         // Convert our transition format "P → A" to changeType format "P→A"
         const changeType = `${c.oldStatus}→${c.newStatus}`;
         // Handle special cases: Blank/null becomes "NEW" or "REMOVED_STATUS"
@@ -260,8 +269,6 @@ export default function PropertyDashboard() {
           (c.newStatus ? `NEW→${c.newStatus}` : 'REMOVED_STATUS') :
           (c.newStatus === 'Blank' || c.newStatus === null ? 'REMOVED_STATUS' : changeType);
         
-        // Normalize: remove spaces from both
-        const normalizedSelected = selectedBreakdownTransition.replace(/\s+/g, '');
         const normalizedChangeTypeNoSpaces = normalizedChangeType.replace(/\s+/g, '');
         const changeTypeNoSpaces = changeType.replace(/\s+/g, '');
         
