@@ -240,8 +240,24 @@ export default function PropertyDashboard() {
   const getFilteredStatusChanges = () => {
     let allChanges = getStatusChanges();
     
+    // Filter by breakdown transition (from comparison report changeType format like "P→A")
+    if (selectedBreakdownTransition) {
+      allChanges = allChanges.filter(c => {
+        // Convert our transition format "P → A" to changeType format "P→A"
+        const changeType = `${c.oldStatus}→${c.newStatus}`;
+        // Handle special cases: Blank/null becomes "NEW" or "REMOVED_STATUS"
+        const normalizedChangeType = c.oldStatus === 'Blank' || c.oldStatus === null ? 
+          (c.newStatus ? `NEW→${c.newStatus}` : 'REMOVED_STATUS') :
+          (c.newStatus === 'Blank' || c.newStatus === null ? 'REMOVED_STATUS' : changeType);
+        
+        // Normalize: remove spaces
+        const normalizedSelected = selectedBreakdownTransition.replace(/\s+/g, '');
+        return normalizedChangeType === normalizedSelected || changeType === normalizedSelected;
+      });
+    }
+    
     // Filter by transition type (Blank→P, P→A, A→J, J→Deleted)
-    if (transitionFilter) {
+    if (transitionFilter && !selectedBreakdownTransition) {
       allChanges = allChanges.filter(c => {
         const transition = `${c.oldStatus} → ${c.newStatus}`.toLowerCase();
         switch (transitionFilter) {
@@ -261,7 +277,7 @@ export default function PropertyDashboard() {
     }
     
     // Filter by new status (J, A, P) - only if transition filter is not active
-    if (!transitionFilter && statusChangeFilter.size < 3) {
+    if (!transitionFilter && !selectedBreakdownTransition && statusChangeFilter.size < 3) {
       allChanges = allChanges.filter(c => {
         if (!c.newStatus || c.newStatus === 'Blank') return false;
         return statusChangeFilter.has(c.newStatus as 'J' | 'A' | 'P');
@@ -618,16 +634,8 @@ export default function PropertyDashboard() {
                                     setTransitionFilter(null);
                                   } else {
                                     setSelectedBreakdownTransition(changeType);
-                                    // Map changeType to transitionFilter format
-                                    if (changeType === 'P→A') setTransitionFilter('p-to-a');
-                                    else if (changeType === 'A→J') setTransitionFilter('a-to-j');
-                                    else if (changeType.startsWith('NEW→') || changeType.startsWith('Blank→')) {
-                                      if (changeType.includes('→P')) setTransitionFilter('blank-to-p');
-                                      else setTransitionFilter(null);
-                                    } else {
-                                      // For other transitions, set a custom filter
-                                      setTransitionFilter(changeType.toLowerCase().replace('→', '-to-') as any);
-                                    }
+                                    // Clear transition filter when using breakdown filter
+                                    setTransitionFilter(null);
                                   }
                                 }}
                                 className={`flex justify-between items-center p-2 rounded transition-all ${
