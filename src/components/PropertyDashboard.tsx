@@ -248,6 +248,47 @@ export default function PropertyDashboard() {
   };
 
   const getFilteredStatusChanges = () => {
+    // If a breakdown transition is selected, use comparison report data directly
+    if (selectedBreakdownTransition && comparisonReport && comparisonReport.statusChanges) {
+      const normalizedSelected = selectedBreakdownTransition.replace(/\s+/g, '');
+      
+      // Filter comparison report statusChanges by the selected transition
+      const filtered = comparisonReport.statusChanges.filter((sc: any) => {
+        const changeType = sc.changeType || `${sc.oldStatus || 'Blank'}→${sc.newStatus || 'Blank'}`;
+        const normalizedChangeType = changeType.replace(/\s+/g, '');
+        
+        // Handle "NEW" without target status - match all new properties
+        if (normalizedSelected === 'NEW') {
+          return (sc.oldStatus === null || sc.oldStatus === undefined || sc.oldStatus === 'Blank') && 
+                 sc.newStatus && sc.newStatus !== 'Blank';
+        }
+        
+        return normalizedChangeType === normalizedSelected;
+      });
+      
+      // Convert comparison report format to getStatusChanges format
+      return filtered.map((sc: any) => {
+        // Find the corresponding property from properties array
+        const prop = properties.find(p => {
+          const can = p.CAN || p['CAN'] || p.propertyId || p['Property ID'];
+          return can === (sc.CAN || sc.identifier);
+        }) || sc.property || {};
+        
+        const currentStatus = prop.currentStatus || getPropertyStatus(prop) || sc.newStatus;
+        const oldStatus = sc.oldStatus === null || sc.oldStatus === undefined ? 'Blank' : sc.oldStatus;
+        const newStatus = currentStatus === null ? 'Blank' : currentStatus;
+        
+        return {
+          property: prop,
+          oldStatus,
+          newStatus,
+          isNew: oldStatus === 'Blank' && newStatus !== 'Blank',
+          transition: `${oldStatus} → ${newStatus}`,
+          daysSinceChange: prop.daysSinceStatusChange || 0
+        };
+      });
+    }
+    
     let allChanges = getStatusChanges();
     
     // Filter by breakdown transition (from comparison report changeType format like "P→A")
