@@ -258,13 +258,17 @@ export default function PropertyDashboard() {
         const normalizedChangeType = changeType.replace(/\s+/g, '');
         
         // Handle "NEW" without target status - match all new properties
+        // "NEW" means oldStatus is null/undefined/Blank and there's a newStatus
         if (normalizedSelected === 'NEW') {
-          return (sc.oldStatus === null || sc.oldStatus === undefined || sc.oldStatus === 'Blank') && 
-                 sc.newStatus && sc.newStatus !== 'Blank';
+          const isNew = (sc.oldStatus === null || sc.oldStatus === undefined || sc.oldStatus === 'Blank' || sc.oldStatus === '') && 
+                        sc.newStatus && sc.newStatus !== 'Blank' && sc.newStatus !== null && sc.newStatus !== undefined;
+          return isNew;
         }
         
         return normalizedChangeType === normalizedSelected;
       });
+      
+      console.log(`🔍 Filtering by "${normalizedSelected}": Found ${filtered.length} status changes from comparison report`);
       
       // Convert comparison report format to getStatusChanges format
       return filtered.map((sc: any) => {
