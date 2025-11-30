@@ -40,7 +40,15 @@ export default function PropertyDashboard() {
   const [transitionFilter, setTransitionFilter] = useState<string | null>(null); // 'blank-to-p', 'p-to-a', 'a-to-j', 'j-to-deleted'
   const [showStatusChanges, setShowStatusChanges] = useState(true);
   const [deadLeads, setDeadLeads] = useState<any[]>([]); // Properties that were J and got removed
-  const [comparisonReport, setComparisonReport] = useState<any>(null);
+  const [comparisonReport, setComparisonReport] = useState<any>({
+    summary: {
+      newPropertiesCount: 0, removedPropertiesCount: 0, statusChangesCount: 0,
+      totPercanChangesCount: 0, legalStatusChangesCount: 0, foreclosedPropertiesCount: 0,
+      totalPropertiesInNewFile: 0, totalPropertiesInPreviousFile: 0
+    },
+    newProperties: [], removedProperties: [], foreclosedProperties: [],
+    statusChanges: [], totPercanChanges: [], legalStatusChanges: []
+  });
   const [showComparisonReport, setShowComparisonReport] = useState(true);
   const [changeFilter, setChangeFilter] = useState<'all' | 'status' | 'totpercan' | 'legalstatus'>('all');
   const [previousStatusFilter, setPreviousStatusFilter] = useState<'all' | 'J' | 'A' | 'P' | 'new'>('all');
@@ -539,7 +547,7 @@ export default function PropertyDashboard() {
             </div>
 
             {/* Comparison Report Section */}
-            {comparisonReport && (
+            {comparisonReport ? (
               <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200 p-6 mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
