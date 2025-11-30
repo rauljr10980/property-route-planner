@@ -614,7 +614,85 @@ export default function FileHistory() {
         {filteredFiles.length > 0 ? (
           <div className="space-y-4">
             {filteredFiles.map((file) => (
-                      {comparisonReport.summary?.totPercanChangesCount !== undefined && (
+              <div key={file.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="bg-blue-100 p-3 rounded-lg">
+                      <FileText className="text-blue-600" size={32} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">{file.filename}</h3>
+                      <div className="flex gap-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center gap-1">
+                          <Calendar size={14} />
+                          {new Date(file.uploadDate).toLocaleString()}
+                        </div>
+                        <div>
+                          {file.rowCount.toLocaleString()} properties
+                        </div>
+                        <div>
+                          {formatFileSize(file.fileSize)}
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        {file.columns.slice(0, 5).map((col, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                            {col}
+                          </span>
+                        ))}
+                        {file.columns.length > 5 && (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                            +{file.columns.length - 5} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handlePreviewFile(file)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold text-sm"
+                    >
+                      Preview
+                    </button>
+                    <button
+                      onClick={() => handleDownloadFile(file)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold text-sm"
+                    >
+                      Download
+                    </button>
+                    <button
+                      onClick={() => handleLoadFile(file)}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold text-sm"
+                    >
+                      Load
+                    </button>
+                    <button
+                      onClick={() => handleDeleteFile(file.id)}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold text-sm"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-md p-12 text-center">
+            <FileText className="mx-auto mb-4 text-gray-400" size={48} />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">No Files Yet</h3>
+            <p className="text-gray-600">
+              Upload your first Excel file to get started
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default FileHistory;
                         <> • <strong>{comparisonReport.summary.totPercanChangesCount || 0}</strong> properties with TOT_PERCAN changes</>
                       )}
                       {comparisonReport.summary?.legalStatusChangesCount !== undefined && (
