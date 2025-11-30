@@ -259,7 +259,13 @@ export default function PropertyDashboard() {
         
         // Handle "NEW" without target status - match all new properties
         // "NEW" means oldStatus is null/undefined/Blank and there's a newStatus
+        // Also match "NEW→P", "NEW→A", "NEW→J" etc. when filtering by just "NEW"
         if (normalizedSelected === 'NEW') {
+          // Match items with changeType exactly "NEW" or starting with "NEW→"
+          if (normalizedChangeType === 'NEW' || normalizedChangeType.startsWith('NEW→')) {
+            return true;
+          }
+          // Also match items where oldStatus is null/undefined/Blank
           const isNew = (sc.oldStatus === null || sc.oldStatus === undefined || sc.oldStatus === 'Blank' || sc.oldStatus === '') && 
                         sc.newStatus && sc.newStatus !== 'Blank' && sc.newStatus !== null && sc.newStatus !== undefined;
           return isNew;
@@ -268,7 +274,7 @@ export default function PropertyDashboard() {
         return normalizedChangeType === normalizedSelected;
       });
       
-      console.log(`🔍 Filtering by "${normalizedSelected}": Found ${filtered.length} status changes from comparison report`);
+      console.log(`🔍 Filtering by "${normalizedSelected}": Found ${filtered.length} status changes from comparison report (out of ${comparisonReport.statusChanges.length} total)`);
       
       // Convert comparison report format to getStatusChanges format
       return filtered.map((sc: any) => {
