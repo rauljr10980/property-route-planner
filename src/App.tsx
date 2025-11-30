@@ -114,7 +114,7 @@ export default function App() {
             <div className="flex items-center justify-between h-16">
               <div className="flex items-center gap-3">
                 <Menu className="w-6 h-6 text-indigo-600" />
-                <h1 className="text-xl font-bold text-gray-900">Property Management Suite</h1>
+                <h1 className="text-xl font-bold text-gray-900">Real Estate Acquisitions</h1>
               </div>
               
               {/* Tab Navigation */}
