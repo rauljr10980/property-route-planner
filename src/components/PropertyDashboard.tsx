@@ -45,6 +45,8 @@ export default function PropertyDashboard() {
   const [changeFilter, setChangeFilter] = useState<'all' | 'status' | 'totpercan' | 'legalstatus'>('all');
   const [previousStatusFilter, setPreviousStatusFilter] = useState<'all' | 'J' | 'A' | 'P' | 'new'>('all');
   const [selectedBreakdownTransition, setSelectedBreakdownTransition] = useState<string | null>(null); // For filtering by clicked transition
+  const [statusChangesPage, setStatusChangesPage] = useState(1); // Pagination for status changes table
+  const [statusChangesPerPage, setStatusChangesPerPage] = useState(250); // Items per page
   const [mapCenter, setMapCenter] = useState({ lat: 29.4241, lng: -98.4936 });
   const [mapZoom, setMapZoom] = useState(11);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -300,6 +302,24 @@ export default function PropertyDashboard() {
     
     return allChanges;
   };
+
+  // Pagination for status changes table
+  const getPaginatedStatusChanges = () => {
+    const allChanges = getFilteredStatusChanges();
+    const startIndex = (statusChangesPage - 1) * statusChangesPerPage;
+    const endIndex = startIndex + statusChangesPerPage;
+    return {
+      items: allChanges.slice(startIndex, endIndex),
+      total: allChanges.length,
+      totalPages: Math.ceil(allChanges.length / statusChangesPerPage),
+      currentPage: statusChangesPage
+    };
+  };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setStatusChangesPage(1);
+  }, [transitionFilter, selectedBreakdownTransition, statusChangeFilter]);
 
   const getStatusColor = (status: string): string => {
     switch(status) {
