@@ -268,11 +268,28 @@ export default function PropertyDashboard() {
       
       // Convert comparison report format to getStatusChanges format
       return filtered.map((sc: any) => {
-        // Find the corresponding property from properties array
-        const prop = properties.find(p => {
-          const can = p.CAN || p['CAN'] || p.propertyId || p['Property ID'];
-          return can === (sc.CAN || sc.identifier);
-        }) || sc.property || {};
+        // Use the property from statusChange if available, otherwise find it from properties array
+        let prop = sc.property;
+        
+        // If property is not in statusChange, try to find it from properties array
+        if (!prop || Object.keys(prop).length === 0) {
+          prop = properties.find(p => {
+            const can = p.CAN || p['CAN'] || p.propertyId || p['Property ID'] || p.id;
+            const scCan = sc.CAN || sc.identifier || sc.property?.CAN || sc.property?.id;
+            return can && scCan && String(can).trim() === String(scCan).trim();
+          });
+        }
+        
+        // If still not found, create a minimal property object from statusChange data
+        if (!prop || Object.keys(prop).length === 0) {
+          prop = {
+            CAN: sc.CAN || sc.identifier,
+            ADDRSTRING: sc.address,
+            id: sc.identifier || sc.CAN,
+            currentStatus: sc.newStatus,
+            previousStatus: sc.oldStatus
+          };
+        }
         
         const currentStatus = prop.currentStatus || getPropertyStatus(prop) || sc.newStatus;
         const oldStatus = sc.oldStatus === null || sc.oldStatus === undefined ? 'Blank' : sc.oldStatus;
@@ -284,7 +301,7 @@ export default function PropertyDashboard() {
           newStatus,
           isNew: oldStatus === 'Blank' && newStatus !== 'Blank',
           transition: `${oldStatus} → ${newStatus}`,
-          daysSinceChange: prop.daysSinceStatusChange || 0
+          daysSinceChange: sc.daysSinceChange || prop.daysSinceStatusChange || 0
         };
       });
     }
