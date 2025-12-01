@@ -82,28 +82,46 @@ export default function PropertyList() {
   const fetchCADForAllVisible = async () => {
     const paginated = getPaginatedStatusChanges();
     
-    // Extract CAN values - need to get full property from properties array to get 12-digit CAN
+    // Extract CAN values - search through all properties to find matches
     const propertiesToFetch = paginated.items
       .map(change => {
         const changeObj = change;
         let prop = change.property || change;
         
-        // If property is minimal (from comparison report), try to find full property from properties array
-        if (!prop.CAN || String(prop.CAN).replace(/[\s-]/g, '').trim().length !== 12) {
-          // Try to find the full property using identifier
-          const identifier = changeObj.CAN || changeObj.identifier || changeObj.property?.CAN || 
-                            prop.CAN || prop.id || prop.identifier;
-          if (identifier) {
-            const fullProp = properties.find(p => {
-              const pCan = p.CAN || p['CAN'];
+        // Get any identifier from the change object to search with
+        const identifier = changeObj.CAN || changeObj.identifier || 
+                          prop.CAN || prop.id || prop.identifier ||
+                          prop.propertyId || prop['Property ID'];
+        
+        // Try to find full property from properties array using multiple matching strategies
+        let fullProp = null;
+        if (identifier) {
+          // Strategy 1: Match by CAN
+          fullProp = properties.find(p => {
+            const pCan = p.CAN || p['CAN'];
+            return pCan && String(pCan).trim() === String(identifier).trim();
+          });
+          
+          // Strategy 2: Match by id/propertyId
+          if (!fullProp) {
+            fullProp = properties.find(p => {
               const pId = p.id || p.propertyId || p['Property ID'];
-              return (pCan && String(pCan).trim() === String(identifier).trim()) ||
-                     (pId && String(pId).trim() === String(identifier).trim());
+              return pId && String(pId).trim() === String(identifier).trim();
             });
-            if (fullProp) {
-              prop = fullProp;
-            }
           }
+          
+          // Strategy 3: Match by address (if identifier matches property ID shown in table)
+          if (!fullProp && prop.ADDRSTRING) {
+            fullProp = properties.find(p => {
+              const pAddr = p.ADDRSTRING || p['ADDRSTRING'] || p.address || p.Address;
+              return pAddr && pAddr.trim() === prop.ADDRSTRING.trim();
+            });
+          }
+        }
+        
+        // Use full property if found, otherwise use the property from change
+        if (fullProp) {
+          prop = fullProp;
         }
         
         // Get CAN - must be 12 digits
@@ -119,7 +137,9 @@ export default function PropertyList() {
           can, 
           prop, 
           change,
-          identifier: changeObj.CAN || changeObj.identifier || prop.CAN || prop.id
+          identifier,
+          foundFullProp: !!fullProp,
+          propHasCAN: !!(prop.CAN || prop['CAN'])
         };
       })
       .filter(({ can }) => {
@@ -129,21 +149,30 @@ export default function PropertyList() {
         return /^\d{12}$/.test(cleaned);
       });
 
-    console.log('Properties to fetch CAD for:', propertiesToFetch.length);
+    console.log('=== CAD Fetch Debug ===');
     console.log('Total items in view:', paginated.items.length);
+    console.log('Properties with valid CAN:', propertiesToFetch.length);
+    
     if (propertiesToFetch.length > 0) {
-      console.log('Sample CANs:', propertiesToFetch.slice(0, 3).map(p => ({ can: p.can, original: p.originalCan })));
+      console.log('✅ Sample CANs found:', propertiesToFetch.slice(0, 3).map(p => ({ 
+        can: p.can, 
+        identifier: p.identifier,
+        foundFullProp: p.foundFullProp
+      })));
     } else {
       // Debug: log what we found
       const sampleItems = paginated.items.slice(0, 3);
-      console.log('No valid CANs found. Sample items:', sampleItems.map(c => ({
-        hasProperty: !!c.property,
-        changeCAN: c.CAN,
-        changeIdentifier: c.identifier,
-        propertyCAN: c.property?.CAN,
-        propertyKeys: c.property ? Object.keys(c.property).slice(0, 10) : [],
-        propertyId: c.property?.propertyId || c.property?.id
-      })));
+      console.log('❌ No valid CANs found. Sample items:', sampleItems.map(c => {
+        const prop = c.property || c;
+        return {
+          changeIdentifier: c.CAN || c.identifier,
+          propertyCAN: prop.CAN || prop['CAN'],
+          propertyId: prop.id || prop.propertyId || prop['Property ID'],
+          propertyKeys: Object.keys(prop).slice(0, 15),
+          allPropertiesCount: properties.length,
+          samplePropertyCAN: properties[0]?.CAN || properties[0]?.['CAN']
+        };
+      }));
     }
 
     if (propertiesToFetch.length === 0) {
