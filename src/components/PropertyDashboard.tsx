@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlertCircle, TrendingUp, Map, Filter, TrendingDown, Minus, CheckCircle, ChevronDown } from 'lucide-react';
+import { AlertCircle, TrendingUp, Map, Filter, TrendingDown, Minus, CheckCircle, ChevronDown, Navigation } from 'lucide-react';
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { loadSharedProperties } from '../utils/sharedData';
