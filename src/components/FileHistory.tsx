@@ -33,6 +33,7 @@ export default function FileHistory() {
     cadFailed: number;
     cadSkipped: number;
     currentProperty?: string;
+    startTime?: number;
   } | null>(null);
 
   useEffect(() => {
