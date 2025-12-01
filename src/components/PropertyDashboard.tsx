@@ -386,7 +386,8 @@ export default function PropertyDashboard() {
     const allChanges = getFilteredStatusChanges();
     const startIndex = (statusChangesPage - 1) * statusChangesPerPage;
     const endIndex = startIndex + statusChangesPerPage;
-    const paginatedItems = allChanges.slice(startIndex, endIndex);
+    // Force slice to ensure we never return more than statusChangesPerPage items
+    const paginatedItems = allChanges.slice(startIndex, endIndex).slice(0, statusChangesPerPage);
     
     return {
       items: paginatedItems,
@@ -1306,7 +1307,14 @@ export default function PropertyDashboard() {
                             }
                             
                             // Use paginated items directly (already sliced to 250 max)
-                            const itemsToRender = paginated.items;
+                            // Force limit to 250 items maximum as a safety check
+                            const itemsToRender = paginated.items.slice(0, statusChangesPerPage);
+                            
+                            // Debug: Log to verify pagination is working
+                            if (itemsToRender.length > statusChangesPerPage) {
+                              console.warn(`⚠️ Pagination error: Found ${itemsToRender.length} items, expected max ${statusChangesPerPage}`);
+                            }
+                            
                             if (itemsToRender.length === 0) {
                               return (
                                 <tr>
@@ -1317,6 +1325,7 @@ export default function PropertyDashboard() {
                               );
                             }
                             
+                            // Render only the paginated items (max 250)
                             return itemsToRender.map((change, idx) => {
                             const prop = change.property;
                             const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
