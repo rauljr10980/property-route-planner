@@ -391,8 +391,13 @@ export default function PropertyDashboard() {
     const allChanges = getFilteredStatusChanges();
     const startIndex = (statusChangesPage - 1) * statusChangesPerPage;
     const endIndex = startIndex + statusChangesPerPage;
+    const paginatedItems = allChanges.slice(startIndex, endIndex);
+    
+    // Debug logging
+    console.log(`📄 Pagination: Page ${statusChangesPage}, Items per page: ${statusChangesPerPage}, Total: ${allChanges.length}, Showing: ${paginatedItems.length} items (indices ${startIndex}-${endIndex})`);
+    
     return {
-      items: allChanges.slice(startIndex, endIndex),
+      items: paginatedItems,
       total: allChanges.length,
       totalPages: Math.ceil(allChanges.length / statusChangesPerPage),
       currentPage: statusChangesPage
