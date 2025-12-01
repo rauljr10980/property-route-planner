@@ -407,6 +407,27 @@ export default function PropertyList() {
               </span>
             </div>
             <button
+              onClick={fetchCADForAllVisible}
+              disabled={fetchingAllCAD || paginated.items.length === 0}
+              className={`px-4 py-2.5 rounded-md text-sm font-bold transition-colors whitespace-nowrap flex items-center gap-2 ${
+                fetchingAllCAD || paginated.items.length === 0
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed border-2 border-gray-300'
+                  : 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm border-2 border-purple-700'
+              }`}
+            >
+              {fetchingAllCAD ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Fetching CAD...
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4" />
+                  Fetch CAD for All ({paginated.items.length})
+                </>
+              )}
+            </button>
+            <button
               onClick={() => setShowStatusChanges(!showStatusChanges)}
               className="text-gray-700 hover:text-gray-900 px-4 py-2.5 rounded-md hover:bg-gray-100 text-sm font-bold transition-colors whitespace-nowrap border-2 border-gray-400 bg-white"
             >
