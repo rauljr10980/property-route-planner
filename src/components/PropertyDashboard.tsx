@@ -245,10 +245,13 @@ export default function PropertyDashboard() {
   };
 
   const getFilteredStatusChanges = () => {
+    console.log('🔎 getFilteredStatusChanges CALLED');
+
     // If a breakdown transition is selected, use comparison report data directly
     if (selectedBreakdownTransition && comparisonReport && comparisonReport.statusChanges) {
+      console.log('🔎 Using breakdown transition:', selectedBreakdownTransition);
       const normalizedSelected = selectedBreakdownTransition.replace(/\s+/g, '');
-      
+
       // Filter comparison report statusChanges by the selected transition
       const filtered = comparisonReport.statusChanges.filter((sc: any) => {
         const changeType = sc.changeType || `${sc.oldStatus || 'Blank'}→${sc.newStatus || 'Blank'}`;
@@ -377,7 +380,8 @@ export default function PropertyDashboard() {
         return statusChangeFilter.has(c.newStatus as 'J' | 'A' | 'P');
       });
     }
-    
+
+    console.log(`🔎 getFilteredStatusChanges RETURNING ${allChanges.length} items`);
     return allChanges;
   };
 
@@ -385,12 +389,27 @@ export default function PropertyDashboard() {
   const getPaginatedStatusChanges = () => {
     // Get the filtered list first (this applies all active filters)
     const filteredList = getFilteredStatusChanges();
-    
+
     // Apply pagination to the filtered list (250 items per page for THIS specific filter)
     const startIndex = (statusChangesPage - 1) * statusChangesPerPage;
     const endIndex = startIndex + statusChangesPerPage;
     const paginatedItems = filteredList.slice(startIndex, endIndex);
-    
+
+    // DEBUG: Log pagination details
+    console.log('🔍 PAGINATION DEBUG:', {
+      filteredListLength: filteredList.length,
+      startIndex,
+      endIndex,
+      paginatedItemsLength: paginatedItems.length,
+      statusChangesPage,
+      statusChangesPerPage,
+      currentFilter: {
+        transitionFilter,
+        selectedBreakdownTransition,
+        statusChangeFilter: Array.from(statusChangeFilter)
+      }
+    });
+
     return {
       items: paginatedItems, // Max 250 items from the current filtered list
       total: filteredList.length, // Total items in the current filtered list
@@ -1240,6 +1259,27 @@ export default function PropertyDashboard() {
                       </div>
                     </div>
 
+                    {/* DEBUG: Visual row count indicator */}
+                    {(() => {
+                      const paginated = getPaginatedStatusChanges();
+                      return (
+                        <div className="mb-3 p-3 bg-yellow-100 border-2 border-yellow-500 rounded-lg">
+                          <div className="text-sm font-bold text-yellow-900">
+                            🐛 DEBUG INFO (This will be removed after debugging)
+                          </div>
+                          <div className="text-xs text-yellow-800 mt-1">
+                            • Table should render <strong>{paginated.items.length}</strong> rows (max 250 per page)
+                            <br />
+                            • Total filtered items: <strong>{paginated.total}</strong>
+                            <br />
+                            • Current page: <strong>{paginated.currentPage}</strong> of <strong>{paginated.totalPages}</strong>
+                            <br />
+                            • Open browser console (F12) to see detailed logs
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     {/* Status Changes Table */}
                     <div className="overflow-x-auto">
                       <table className="w-full" style={{ tableLayout: 'fixed', maxWidth: '100%' }}>
@@ -1311,7 +1351,15 @@ export default function PropertyDashboard() {
                             // Use paginated items - already limited to 250 per page for THIS filter
                             // Each filter (Judgment, Active, Pending, transitions) has its own pagination
                             const itemsToRender = paginated.items;
-                            
+
+                            // DEBUG: Log what we're about to render
+                            console.log('📊 TABLE RENDER DEBUG:', {
+                              itemsToRenderLength: itemsToRender.length,
+                              paginatedTotal: paginated.total,
+                              paginatedCurrentPage: paginated.currentPage,
+                              paginatedTotalPages: paginated.totalPages
+                            });
+
                             if (itemsToRender.length === 0) {
                               return (
                                 <tr>
@@ -1321,9 +1369,19 @@ export default function PropertyDashboard() {
                                 </tr>
                               );
                             }
-                            
+
+                            // DEBUG: Verify we're rendering the correct number
+                            console.log(`✅ RENDERING ${itemsToRender.length} ROWS (should be ≤ ${statusChangesPerPage})`);
+
+                            // HARD SAFETY LIMIT: Ensure we NEVER render more than 250 items
+                            const safeItemsToRender = itemsToRender.slice(0, statusChangesPerPage);
+
+                            if (safeItemsToRender.length !== itemsToRender.length) {
+                              console.error(`🚨 SAFETY LIMIT TRIGGERED! Attempted to render ${itemsToRender.length} items, limited to ${safeItemsToRender.length}`);
+                            }
+
                             // Render only the paginated items (max 250 per page for current filter)
-                            return itemsToRender.map((change, idx) => {
+                            return safeItemsToRender.map((change, idx) => {
                             const prop = change.property;
                             const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
                             const pnumber = prop.Pnumber || prop['Pnumber'] || '';
@@ -1394,6 +1452,25 @@ export default function PropertyDashboard() {
                         </tbody>
                       </table>
                     </div>
+
+                    {/* DEBUG: Row count after table */}
+                    {(() => {
+                      const paginated = getPaginatedStatusChanges();
+                      return (
+                        <div className="mt-3 p-3 bg-green-100 border-2 border-green-500 rounded-lg">
+                          <div className="text-sm font-bold text-green-900">
+                            ✅ TABLE RENDERED SUCCESSFULLY
+                          </div>
+                          <div className="text-xs text-green-800 mt-1">
+                            • Check the table above - it should have <strong>{paginated.items.length}</strong> rows
+                            <br />
+                            • If you see more than 250 rows, check browser console for errors
+                            <br />
+                            • Try counting the rows manually or use browser DevTools to inspect
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
