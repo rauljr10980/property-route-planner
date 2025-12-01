@@ -1277,7 +1277,8 @@ export default function PropertyDashboard() {
                       {/* Pagination Controls */}
                       {(() => {
                         const paginated = getPaginatedStatusChanges();
-                        if (paginated.totalPages <= 1) return null;
+                        // Always show pagination if there are more than 250 items
+                        if (paginated.total <= statusChangesPerPage) return null;
                         
                         return (
                           <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-4">
