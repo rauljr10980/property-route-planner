@@ -1041,12 +1041,79 @@ export default function PropertyDashboard() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setShowStatusChanges(!showStatusChanges)}
-                    className="text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-100 text-sm font-medium transition-colors"
-                  >
-                    {showStatusChanges ? 'Hide' : 'Show'}
-                  </button>
+                  <div className="flex items-center gap-4">
+                    {/* Pagination Controls - Next to Hide button */}
+                    {(() => {
+                      const paginated = getPaginatedStatusChanges();
+                      
+                      // Show pagination if there are more items than can fit on one page
+                      if (paginated.total > statusChangesPerPage) {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setStatusChangesPage(p => Math.max(1, p - 1))}
+                              disabled={paginated.currentPage === 1}
+                              className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                                paginated.currentPage === 1
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              Previous
+                            </button>
+                            <div className="flex gap-1 flex-wrap">
+                              {Array.from({ length: Math.min(10, paginated.totalPages) }, (_, i) => {
+                                let pageNum;
+                                if (paginated.totalPages <= 10) {
+                                  pageNum = i + 1;
+                                } else if (paginated.currentPage <= 5) {
+                                  pageNum = i + 1;
+                                } else if (paginated.currentPage >= paginated.totalPages - 4) {
+                                  pageNum = paginated.totalPages - 9 + i;
+                                } else {
+                                  pageNum = paginated.currentPage - 4 + i;
+                                }
+                                return (
+                                  <button
+                                    key={pageNum}
+                                    onClick={() => setStatusChangesPage(pageNum)}
+                                    className={`px-3 py-1.5 rounded-md text-sm font-semibold transition min-w-[36px] ${
+                                      paginated.currentPage === pageNum
+                                        ? 'bg-indigo-600 text-white shadow-md'
+                                        : 'bg-white border border-indigo-300 text-gray-700 hover:bg-indigo-50 hover:border-indigo-400'
+                                    }`}
+                                  >
+                                    {pageNum}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            <button
+                              onClick={() => setStatusChangesPage(p => Math.min(paginated.totalPages, p + 1))}
+                              disabled={paginated.currentPage === paginated.totalPages}
+                              className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                                paginated.currentPage === paginated.totalPages
+                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                              }`}
+                            >
+                              Next
+                            </button>
+                            <span className="text-sm text-gray-600">
+                              Page {paginated.currentPage} of {paginated.totalPages}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                    <button
+                      onClick={() => setShowStatusChanges(!showStatusChanges)}
+                      className="text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-100 text-sm font-medium transition-colors"
+                    >
+                      {showStatusChanges ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
                 </div>
 
                 {showStatusChanges && (
