@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlertCircle, TrendingUp, Map, Filter, TrendingDown, Minus, Navigation, CheckCircle, X, ChevronDown } from 'lucide-react';
+import { AlertCircle, TrendingUp, Map, Filter, TrendingDown, Minus, CheckCircle, ChevronDown } from 'lucide-react';
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { loadSharedProperties } from '../utils/sharedData';
@@ -54,7 +54,7 @@ export default function PropertyDashboard() {
   const [previousStatusFilter, setPreviousStatusFilter] = useState<'all' | 'J' | 'A' | 'P' | 'new'>('all');
   const [selectedBreakdownTransition, setSelectedBreakdownTransition] = useState<string | null>(null); // For filtering by clicked transition
   const [statusChangesPage, setStatusChangesPage] = useState(1); // Pagination for status changes table
-  const [statusChangesPerPage, setStatusChangesPerPage] = useState(250); // Items per page
+  const statusChangesPerPage = 250; // Items per page (constant)
   const [mapCenter, setMapCenter] = useState({ lat: 29.4241, lng: -98.4936 });
   const [mapZoom, setMapZoom] = useState(11);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -273,8 +273,6 @@ export default function PropertyDashboard() {
         
         return normalizedChangeType === normalizedSelected;
       });
-      
-      console.log(`🔍 Filtering by "${normalizedSelected}": Found ${filtered.length} status changes from comparison report (out of ${comparisonReport.statusChanges.length} total)`);
       
       // Convert comparison report format to getStatusChanges format
       return filtered.map((sc: any) => {
@@ -1248,8 +1246,6 @@ export default function PropertyDashboard() {
                             
                             // Ensure we only render the paginated items (max 250)
                             const itemsToRender = paginated.items.slice(0, statusChangesPerPage);
-                            console.log(`📊 Rendering table: ${itemsToRender.length} items (page ${paginated.currentPage} of ${paginated.totalPages}, total: ${paginated.total})`);
-                            
                             if (itemsToRender.length === 0) {
                               return (
                                 <tr>
@@ -1334,16 +1330,11 @@ export default function PropertyDashboard() {
                       {/* Pagination Controls */}
                       {(() => {
                         const paginated = getPaginatedStatusChanges();
-                        // Always show pagination if there are more than 250 items
-                        console.log(`🔍 Pagination check: total=${paginated.total}, perPage=${statusChangesPerPage}, totalPages=${paginated.totalPages}, currentPage=${paginated.currentPage}`);
                         
                         // Show pagination if there are more items than can fit on one page
                         if (paginated.total <= statusChangesPerPage) {
-                          console.log(`❌ Not showing pagination: total (${paginated.total}) <= perPage (${statusChangesPerPage})`);
                           return null;
                         }
-                        
-                        console.log(`✅ Showing pagination controls for ${paginated.total} items across ${paginated.totalPages} pages`);
                         
                         return (
                           <div className="mt-6 flex items-center justify-between border-t-4 border-indigo-500 pt-6 bg-indigo-50 p-6 rounded-lg shadow-lg">
