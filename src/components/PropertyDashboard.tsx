@@ -1387,7 +1387,21 @@ export default function PropertyDashboard() {
                           })()}
                         </tbody>
                       </table>
-                      {(() => {
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Map and Route Planning */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Map className="text-green-600" size={24} />
+                  <h2 className="text-xl font-bold text-gray-800">Property Map</h2>
+                </div>
+              </div>
+              {(() => {
                         const paginated = getPaginatedStatusChanges();
                         
                         // Show pagination if there are more items than can fit on one page
