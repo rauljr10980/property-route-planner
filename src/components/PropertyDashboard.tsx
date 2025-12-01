@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { AlertCircle, TrendingUp, Map, Filter, TrendingDown, Minus, CheckCircle, ChevronDown, Navigation } from 'lucide-react';
 import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -386,7 +386,10 @@ export default function PropertyDashboard() {
   };
 
   // Pagination for status changes table - works per filter/list
-  const getPaginatedStatusChanges = () => {
+  // MEMOIZED to ensure consistent pagination results
+  const paginatedStatusChanges = useMemo(() => {
+    console.log('⚡ RECALCULATING PAGINATION (useMemo)');
+
     // Get the filtered list first (this applies all active filters)
     const filteredList = getFilteredStatusChanges();
 
@@ -395,28 +398,47 @@ export default function PropertyDashboard() {
     const endIndex = startIndex + statusChangesPerPage;
     const paginatedItems = filteredList.slice(startIndex, endIndex);
 
+    // TRIPLE SAFETY CHECK: Ensure we NEVER exceed 250 items
+    const safePaginatedItems = paginatedItems.slice(0, statusChangesPerPage);
+
+    if (safePaginatedItems.length !== paginatedItems.length) {
+      console.error(`🚨 CRITICAL: Pagination returned ${paginatedItems.length} items, forced to ${safePaginatedItems.length}`);
+    }
+
     // DEBUG: Log pagination details
     console.log('🔍 PAGINATION DEBUG:', {
       filteredListLength: filteredList.length,
       startIndex,
       endIndex,
-      paginatedItemsLength: paginatedItems.length,
+      paginatedItemsLength: safePaginatedItems.length,
       statusChangesPage,
       statusChangesPerPage,
       currentFilter: {
         transitionFilter,
         selectedBreakdownTransition,
         statusChangeFilter: Array.from(statusChangeFilter)
-      }
+      },
+      timestamp: new Date().toISOString()
     });
 
     return {
-      items: paginatedItems, // Max 250 items from the current filtered list
+      items: safePaginatedItems, // Max 250 items from the current filtered list (GUARANTEED)
       total: filteredList.length, // Total items in the current filtered list
       totalPages: Math.ceil(filteredList.length / statusChangesPerPage),
       currentPage: statusChangesPage
     };
-  };
+  }, [
+    statusChangesPage,
+    statusChangesPerPage,
+    transitionFilter,
+    selectedBreakdownTransition,
+    statusChangeFilter,
+    properties,
+    comparisonReport
+  ]);
+
+  // Getter function that returns the memoized value
+  const getPaginatedStatusChanges = () => paginatedStatusChanges;
 
   // Reset to page 1 when filters change (so each filter starts at page 1)
   useEffect(() => {
@@ -1058,9 +1080,13 @@ export default function PropertyDashboard() {
                         Properties with New Status
                         <span className="ml-2 text-sm font-normal text-gray-500">({getStatusChanges().length})</span>
                         <span className="ml-2 text-xs font-semibold text-indigo-600">(250 per page)</span>
+                        <span className="ml-2 text-xs font-mono bg-purple-100 text-purple-700 px-2 py-0.5 rounded" title="Code version - updates when you refresh">
+                          v{Date.now().toString().slice(-6)}
+                        </span>
                       </h2>
                       <p className="text-xs text-gray-600 mt-1">
                         These properties have received a new J, A, or P status since the last upload
+                        <span className="ml-2 text-purple-600 font-semibold">• With memoization + safety limits</span>
                       </p>
                     </div>
                   </div>
@@ -1380,8 +1406,16 @@ export default function PropertyDashboard() {
                               console.error(`🚨 SAFETY LIMIT TRIGGERED! Attempted to render ${itemsToRender.length} items, limited to ${safeItemsToRender.length}`);
                             }
 
+                            // ULTIMATE SAFETY: Apply .slice() one more time right before mapping
+                            // This ensures 100% that we NEVER render more than 250 rows
+                            const finalSafeItems = safeItemsToRender.slice(0, 250);
+
+                            if (finalSafeItems.length > 250) {
+                              console.error(`🚨🚨🚨 IMPOSSIBLE: finalSafeItems has ${finalSafeItems.length} items after slice(0, 250)!`);
+                            }
+
                             // Render only the paginated items (max 250 per page for current filter)
-                            return safeItemsToRender.map((change, idx) => {
+                            return finalSafeItems.map((change, idx) => {
                             const prop = change.property;
                             const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
                             const pnumber = prop.Pnumber || prop['Pnumber'] || '';
