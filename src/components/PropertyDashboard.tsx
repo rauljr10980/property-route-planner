@@ -55,6 +55,8 @@ export default function PropertyDashboard() {
   const [selectedBreakdownTransition, setSelectedBreakdownTransition] = useState<string | null>(null); // For filtering by clicked transition
   const [statusChangesPage, setStatusChangesPage] = useState(1); // Pagination for status changes table
   const statusChangesPerPage = 250; // Items per page (constant)
+  const [comparisonReportPage, setComparisonReportPage] = useState(1); // Pagination for comparison report table
+  const comparisonReportPerPage = 250; // Items per page for comparison report
   const [mapCenter, setMapCenter] = useState({ lat: 29.4241, lng: -98.4936 });
   const [mapZoom, setMapZoom] = useState(11);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -444,6 +446,11 @@ export default function PropertyDashboard() {
   useEffect(() => {
     setStatusChangesPage(1);
   }, [transitionFilter, selectedBreakdownTransition, statusChangeFilter]);
+
+  // Reset comparison report page when filters change
+  useEffect(() => {
+    setComparisonReportPage(1);
+  }, [changeFilter, previousStatusFilter]);
 
   const getStatusColor = (status: string): string => {
     switch(status) {
@@ -880,15 +887,68 @@ export default function PropertyDashboard() {
                     {((changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges) ||
                      (changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges) ? (
                       <div className="bg-white rounded-lg border border-blue-300 p-4">
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                           <h4 className="font-bold text-blue-800">
                             {changeFilter === 'status' && `Status Changes (${comparisonReport.statusChanges.length})`}
                             {changeFilter === 'legalstatus' && `LEGALSTATUS Changes (${comparisonReport.legalStatusChanges.length})`}
                             {changeFilter === 'all' && `All Changes (${comparisonReport.statusChanges.length + (comparisonReport.legalStatusChanges?.length || 0)})`}
+                            <span className="ml-2 text-xs font-semibold text-indigo-600">(250 per page)</span>
                           </h4>
-                          <p className="text-xs text-gray-500">
-                            💡 Tip: Go to Dashboard tab to see full property details
-                          </p>
+
+                          {/* Pagination Controls for Comparison Report */}
+                          {(() => {
+                            let totalItems = 0;
+                            if (changeFilter === 'status') {
+                              totalItems = comparisonReport.statusChanges.filter((sc: any) => {
+                                if (previousStatusFilter === 'all') return true;
+                                if (previousStatusFilter === 'new') return sc.oldStatus === null;
+                                return sc.oldStatus === previousStatusFilter;
+                              }).length;
+                            } else if (changeFilter === 'legalstatus') {
+                              totalItems = comparisonReport.legalStatusChanges?.length || 0;
+                            } else {
+                              const statusCount = comparisonReport.statusChanges.filter((sc: any) => {
+                                if (previousStatusFilter === 'all') return true;
+                                if (previousStatusFilter === 'new') return sc.oldStatus === null;
+                                return sc.oldStatus === previousStatusFilter;
+                              }).length;
+                              totalItems = statusCount + (comparisonReport.legalStatusChanges?.length || 0);
+                            }
+
+                            const totalPages = Math.ceil(totalItems / comparisonReportPerPage);
+
+                            if (totalPages <= 1) return null;
+
+                            return (
+                              <div className="flex items-center gap-2 bg-indigo-50 px-3 py-2 rounded-lg border-2 border-indigo-300">
+                                <button
+                                  onClick={() => setComparisonReportPage(p => Math.max(1, p - 1))}
+                                  disabled={comparisonReportPage === 1}
+                                  className={`px-2 py-1 rounded text-xs font-bold ${
+                                    comparisonReportPage === 1
+                                      ? 'bg-gray-200 text-gray-400'
+                                      : 'bg-white border border-indigo-500 text-indigo-700 hover:bg-indigo-50'
+                                  }`}
+                                >
+                                  ← Prev
+                                </button>
+                                <span className="text-xs font-bold text-indigo-900">
+                                  Page {comparisonReportPage}/{totalPages}
+                                </span>
+                                <button
+                                  onClick={() => setComparisonReportPage(p => Math.min(totalPages, p + 1))}
+                                  disabled={comparisonReportPage === totalPages}
+                                  className={`px-2 py-1 rounded text-xs font-bold ${
+                                    comparisonReportPage === totalPages
+                                      ? 'bg-gray-200 text-gray-400'
+                                      : 'bg-white border border-indigo-500 text-indigo-700 hover:bg-indigo-50'
+                                  }`}
+                                >
+                                  Next →
+                                </button>
+                              </div>
+                            );
+                          })()}
                         </div>
                         <div className="overflow-x-auto max-h-96 overflow-y-auto">
                           <table className="w-full text-sm">
@@ -920,6 +980,8 @@ export default function PropertyDashboard() {
                                   if (previousStatusFilter === 'new') return sc.oldStatus === null;
                                   return sc.oldStatus === previousStatusFilter;
                                 })
+                                .slice((comparisonReportPage - 1) * comparisonReportPerPage, comparisonReportPage * comparisonReportPerPage)
+                                .slice(0, 250) // SAFETY LIMIT: Never show more than 250 items
                                 .map((sc: any, idx: number) => (
                                 <tr key={`status-${idx}`} className="hover:bg-blue-50">
                                   <td className="px-3 py-2 text-xs font-mono text-gray-900">
@@ -970,9 +1032,12 @@ export default function PropertyDashboard() {
                                   </td>
                                 </tr>
                               ))}
-                              
+
                               {/* LEGALSTATUS Changes */}
-                              {changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0 && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
+                              {changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0 && comparisonReport.legalStatusChanges
+                                .slice((comparisonReportPage - 1) * comparisonReportPerPage, comparisonReportPage * comparisonReportPerPage)
+                                .slice(0, 250) // SAFETY LIMIT: Never show more than 250 items
+                                .map((ls: any, idx: number) => (
                                 <tr key={`legalstatus-${idx}`} className="hover:bg-purple-50">
                                   <td className="px-3 py-2 text-xs font-mono text-gray-900">
                                     {ls.CAN || ls.identifier}
@@ -995,7 +1060,10 @@ export default function PropertyDashboard() {
                               {/* All Changes Combined */}
                               {changeFilter === 'all' && (
                                 <>
-                                  {comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0 && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
+                                  {comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0 && comparisonReport.legalStatusChanges
+                                    .slice((comparisonReportPage - 1) * comparisonReportPerPage, comparisonReportPage * comparisonReportPerPage)
+                                    .slice(0, 250) // SAFETY LIMIT: Never show more than 250 items
+                                    .map((ls: any, idx: number) => (
                                     <tr key={`all-legalstatus-${idx}`} className="hover:bg-purple-50">
                                       <td className="px-3 py-2 text-xs font-mono text-gray-900">
                                         {ls.CAN || ls.identifier}
