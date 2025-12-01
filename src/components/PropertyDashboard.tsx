@@ -1310,8 +1310,17 @@ export default function PropertyDashboard() {
                             
                             // Use paginated items - already limited to 250 per page for THIS filter
                             // Each filter (Judgment, Active, Pending, transitions) has its own pagination
-                            const itemsToRender = paginated.items;
-                            
+                            let itemsToRender = paginated.items;
+
+                            // HARD SAFETY LIMIT: Never render more than 250 items
+                            if (itemsToRender.length > 250) {
+                              console.warn(`⚠️ SAFETY LIMIT TRIGGERED: Attempting to render ${itemsToRender.length} items, limiting to 250`);
+                              itemsToRender = itemsToRender.slice(0, 250);
+                            }
+
+                            // Debug logging
+                            console.log(`📊 Table rendering: ${itemsToRender.length} items (Total in filter: ${paginated.total}, Page: ${paginated.currentPage}/${paginated.totalPages})`);
+
                             if (itemsToRender.length === 0) {
                               return (
                                 <tr>
