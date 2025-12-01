@@ -90,7 +90,6 @@ export default function PropertyDashboard() {
       setLoading(true);
       const { properties: sharedProps } = await loadSharedProperties();
       setProperties(sharedProps);
-      console.log(`✅ Property Dashboard loaded ${sharedProps.length} properties`);
       
       // Load comparison report to get dead leads and full report
       try {
@@ -99,9 +98,7 @@ export default function PropertyDashboard() {
           setComparisonReport(comparisonResult.report);
           if (comparisonResult.report.foreclosedProperties) {
             setDeadLeads(comparisonResult.report.foreclosedProperties);
-            console.log(`✅ Loaded ${comparisonResult.report.foreclosedProperties.length} dead leads from comparison report`);
           }
-          console.log(`✅ Loaded comparison report with ${comparisonResult.report.summary?.statusChangesCount || 0} status changes`);
         } else {
           // Initialize with empty report structure if none exists
           setComparisonReport({
