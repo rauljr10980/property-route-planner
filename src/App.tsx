@@ -15,7 +15,7 @@ if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY') 
 type Tab = 'dashboard' | 'history';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<Tab>('history'); // Default to File History tab
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard'); // Default to Dashboard tab
   const [mapsError, setMapsError] = useState<string | null>(null);
   const [mapsLoaded, setMapsLoaded] = useState(false);
 
