@@ -30,6 +30,7 @@ export default function PropertyList() {
   const [deadLeads, setDeadLeads] = useState<any[]>([]);
   const [fetchingCAD, setFetchingCAD] = useState<Set<string>>(new Set());
   const [cadData, setCadData] = useState<Map<string, { cad: string | null; propertyInfo?: any }>>(new Map());
+  const [fetchingAllCAD, setFetchingAllCAD] = useState(false);
 
   const getPropertyStatus = (prop: Property): string | null => {
     return getPropertyStatusUtil(prop);
@@ -76,6 +77,51 @@ export default function PropertyList() {
         return newSet;
       });
     }
+  };
+
+  const fetchCADForAllVisible = async () => {
+    const paginated = getPaginatedStatusChanges();
+    const propertiesToFetch = paginated.items.map(change => {
+      const prop = change.property;
+      const can = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber;
+      return { can, prop };
+    }).filter(({ can }) => can && String(can).replace(/[\s-]/g, '').trim().length === 12);
+
+    if (propertiesToFetch.length === 0) {
+      alert('No properties with valid CAN values found in current view');
+      return;
+    }
+
+    setFetchingAllCAD(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    // Fetch in batches with delays
+    const batchSize = 5;
+    for (let i = 0; i < propertiesToFetch.length; i += batchSize) {
+      const batch = propertiesToFetch.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(async ({ can, prop }) => {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between requests
+          await fetchCADForProperty(can, prop);
+          successCount++;
+        } catch (error) {
+          failCount++;
+          console.error(`Failed to fetch CAD for ${can}:`, error);
+        }
+      });
+
+      await Promise.all(batchPromises);
+      
+      // Delay between batches
+      if (i + batchSize < propertiesToFetch.length) {
+        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between batches
+      }
+    }
+
+    setFetchingAllCAD(false);
+    alert(`CAD fetching complete: ${successCount} successful, ${failCount} failed`);
   };
 
   useEffect(() => {
