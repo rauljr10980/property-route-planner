@@ -449,13 +449,17 @@ export default function PropertyList() {
               <table className="w-full" style={{ tableLayout: 'fixed', maxWidth: '100%' }}>
                 <thead className="bg-gray-100">
                   <tr>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '15%' }}>Property ID</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>Previous Status</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>New Status</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '40%' }}>Additional Details</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '8%' }}>CAD</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '8%' }}>Days</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '11%' }}>Action</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Property ID</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '8%' }}>Previous Status</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '8%' }}>New Status</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '15%' }}>Bexar Address</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>Legal Description</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Total Amount Due</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Market Value</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '8%' }}>Last Payment</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '6%' }}>CAD</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '6%' }}>Days</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '7%' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -469,14 +473,19 @@ export default function PropertyList() {
                         <td className="px-3 py-2">
                           <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800">Deleted/New Owner</span>
                         </td>
-                        <td className="px-3 py-2 text-xs text-gray-600">
-                          <div className="space-y-1">
-                            <div><strong>Address:</strong> {lead.address || 'N/A'}</div>
-                            {lead.CAN && <div><strong>CAN:</strong> {lead.CAN}</div>}
-                            <div className="text-red-600 font-semibold">⚠️ Foreclosed or New Owner - Lead No Longer Valid</div>
+                        <td className="px-3 py-2 text-xs text-gray-700">
+                          <div className="max-w-xs truncate" title={lead.address || 'N/A'}>
+                            {lead.address || 'N/A'}
                           </div>
                         </td>
+                        <td className="px-3 py-2 text-xs text-gray-400">N/A</td>
+                        <td className="px-3 py-2 text-xs text-gray-400">N/A</td>
+                        <td className="px-3 py-2 text-xs text-gray-400">N/A</td>
+                        <td className="px-3 py-2 text-xs text-gray-400">N/A</td>
                         <td className="px-3 py-2 text-xs text-gray-500">N/A</td>
+                        <td className="px-3 py-2">
+                          <span className="text-xs text-gray-400">N/A</span>
+                        </td>
                         <td className="px-3 py-2">
                           <span className="text-xs text-gray-400">N/A</span>
                         </td>
@@ -494,6 +503,25 @@ export default function PropertyList() {
                       const zipCode = prop.ZIP_CODE || prop['ZIP_CODE'] || prop.zipCode || '';
                       // CAD is automatically fetched on backend during file processing
                       const cad = prop.CAD || prop.cadPropertyId || null;
+                      
+                      // Bexar County data
+                      const bexarData = prop.bexarCountyData || {};
+                      const bexarAddress = bexarData.address || bexarData.propertySiteAddress || prop.bexarAddress || '';
+                      const legalDescription = bexarData.legalDescription || prop.legalDescription || '';
+                      const taxInfo = bexarData.taxInfo || prop.taxInfo || {};
+                      const propertyValues = bexarData.propertyValues || prop.propertyValues || {};
+                      const paymentHistory = bexarData.paymentHistory || prop.paymentHistory || [];
+                      
+                      // Format currency
+                      const formatCurrency = (value: number | null | undefined) => {
+                        if (value === null || value === undefined) return 'N/A';
+                        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value);
+                      };
+                      
+                      // Get last payment info
+                      const lastPayment = paymentHistory.length > 0 ? paymentHistory[0] : null;
+                      const lastPaymentAmount = taxInfo.lastPaymentAmount || lastPayment?.amount || null;
+                      const lastPaymentDate = taxInfo.lastPaymentDate || lastPayment?.date || null;
                       
                       return (
                         <tr key={idx} className="hover:bg-gray-50">
@@ -516,15 +544,53 @@ export default function PropertyList() {
                               </span>
                             )}
                           </td>
+                          <td className="px-3 py-2 text-xs text-gray-700">
+                            {bexarAddress ? (
+                              <div className="max-w-xs truncate" title={bexarAddress}>
+                                {bexarAddress}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-xs text-gray-700">
+                            {legalDescription ? (
+                              <div className="max-w-xs truncate" title={legalDescription}>
+                                {legalDescription}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-xs">
+                            {taxInfo.totalAmountDue !== null && taxInfo.totalAmountDue !== undefined ? (
+                              <span className="font-semibold text-red-700">
+                                {formatCurrency(taxInfo.totalAmountDue)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-xs">
+                            {propertyValues.totalMarketValue !== null && propertyValues.totalMarketValue !== undefined ? (
+                              <span className="font-semibold text-blue-700">
+                                {formatCurrency(propertyValues.totalMarketValue)}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
+                          </td>
                           <td className="px-3 py-2 text-xs text-gray-600">
-                            <div className="space-y-1">
-                              {pnumber && <div><strong>Pnumber (Q):</strong> {pnumber}</div>}
-                              {pstrname && <div><strong>PSTRNAME (R):</strong> {pstrname}</div>}
-                              {legalstatus && <div><strong>LEGALSTATUS (AE):</strong> {legalstatus}</div>}
-                              {tot_percan && <div><strong>TOT_PERCAN (BE):</strong> {tot_percan}</div>}
-                              {addrstring && <div><strong>Address (H):</strong> {addrstring}</div>}
-                              {zipCode && <div><strong>ZIP (I):</strong> {zipCode}</div>}
-                            </div>
+                            {lastPaymentAmount !== null ? (
+                              <div>
+                                <div className="font-semibold">{formatCurrency(lastPaymentAmount)}</div>
+                                {lastPaymentDate && (
+                                  <div className="text-xs text-gray-500">{lastPaymentDate}</div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">N/A</span>
+                            )}
                           </td>
                           <td className="px-3 py-2">
                             {cad ? (
@@ -546,7 +612,7 @@ export default function PropertyList() {
                           </td>
                           <td className="px-3 py-2">
                             <a
-                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addrstring || '')}`}
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(bexarAddress || addrstring || '')}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-indigo-600 hover:text-indigo-800 text-xs font-medium flex items-center gap-1"
