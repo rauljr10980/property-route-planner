@@ -1051,9 +1051,14 @@ export default function PropertyDashboard() {
                       const paginated = getPaginatedStatusChanges();
                       
                       // Always show pagination controls - make them very prominent
+                      const startItem = (paginated.currentPage - 1) * statusChangesPerPage + 1;
+                      const endItem = Math.min(paginated.currentPage * statusChangesPerPage, paginated.total);
+
                       return (
                         <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2.5 rounded-lg border-2 border-indigo-300 shadow-sm">
-                          <span className="text-sm text-indigo-900 font-bold whitespace-nowrap">250/page</span>
+                          <span className="text-sm text-indigo-900 font-bold whitespace-nowrap">
+                            Showing {startItem}-{endItem} of {paginated.total}
+                          </span>
                           <span className="text-indigo-400 font-bold">|</span>
                           <button
                             onClick={() => setStatusChangesPage(p => Math.max(1, p - 1))}
