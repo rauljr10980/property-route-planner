@@ -1307,12 +1307,14 @@ export default function PropertyDashboard() {
                             }
                             
                             // Use paginated items directly (already sliced to 250 max)
-                            // Force limit to 250 items maximum as a safety check
+                            // Force limit to 250 items maximum as a safety check - CRITICAL LIMIT
                             const itemsToRender = paginated.items.slice(0, statusChangesPerPage);
                             
                             // Debug: Log to verify pagination is working
+                            console.log(`📊 Rendering page ${statusChangesPage}: ${itemsToRender.length} items (max ${statusChangesPerPage}) out of ${paginated.total} total`);
+                            
                             if (itemsToRender.length > statusChangesPerPage) {
-                              console.warn(`⚠️ Pagination error: Found ${itemsToRender.length} items, expected max ${statusChangesPerPage}`);
+                              console.error(`❌ CRITICAL: Pagination error: Found ${itemsToRender.length} items, expected max ${statusChangesPerPage}`);
                             }
                             
                             if (itemsToRender.length === 0) {
@@ -1325,8 +1327,9 @@ export default function PropertyDashboard() {
                               );
                             }
                             
-                            // Render only the paginated items (max 250)
-                            return itemsToRender.map((change, idx) => {
+                            // Render only the paginated items (max 250) - HARD LIMIT
+                            // Use slice again as final safety check before rendering
+                            return itemsToRender.slice(0, statusChangesPerPage).map((change, idx) => {
                             const prop = change.property;
                             const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
                             const pnumber = prop.Pnumber || prop['Pnumber'] || '';
