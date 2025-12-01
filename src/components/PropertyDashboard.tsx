@@ -1218,8 +1218,22 @@ export default function PropertyDashboard() {
                                 </tr>
                               );
                             }
-                            console.log(`📊 Rendering table: ${paginated.items.length} items (page ${paginated.currentPage} of ${paginated.totalPages}, total: ${paginated.total})`);
-                            return paginated.items.map((change, idx) => {
+                            
+                            // Ensure we only render the paginated items (max 250)
+                            const itemsToRender = paginated.items.slice(0, statusChangesPerPage);
+                            console.log(`📊 Rendering table: ${itemsToRender.length} items (page ${paginated.currentPage} of ${paginated.totalPages}, total: ${paginated.total})`);
+                            
+                            if (itemsToRender.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
+                                    No properties on this page.
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            
+                            return itemsToRender.map((change, idx) => {
                             const prop = change.property;
                             const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
                             const pnumber = prop.Pnumber || prop['Pnumber'] || '';
