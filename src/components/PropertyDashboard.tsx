@@ -1387,8 +1387,6 @@ export default function PropertyDashboard() {
                           })()}
                         </tbody>
                       </table>
-                      
-                      {/* Pagination Controls - Always show when more than 250 items */}
                       {(() => {
                         const paginated = getPaginatedStatusChanges();
                         
