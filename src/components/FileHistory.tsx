@@ -461,9 +461,12 @@ export default function FileHistory() {
         // Process using server-side processing
       setProcessingProgress({ progress: 30, message: 'Processing file on server...' });
       
+      // Load existing properties for comparison
+      const { properties: existingPropertiesForReprocess } = loadSharedPropertiesSync();
+      
       const result = await gcsStorage.processFile(
         file,
-        existingProperties,
+        existingPropertiesForReprocess,
         entry.uploadDate,
         (progress, message) => {
           setProcessingProgress({ progress, message });
