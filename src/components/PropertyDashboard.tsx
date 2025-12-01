@@ -1042,26 +1042,26 @@ export default function PropertyDashboard() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 flex-nowrap">
                     {/* Pagination Controls - Always visible next to Hide button */}
                     {(() => {
                       const paginated = getPaginatedStatusChanges();
                       
-                      // Always show pagination controls - make them prominent
+                      // Always show pagination controls - make them very prominent
                       return (
-                        <div className="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-lg border border-gray-300">
-                          <span className="text-sm text-gray-700 font-bold whitespace-nowrap">250/page</span>
-                          <span className="text-gray-400">|</span>
+                        <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2.5 rounded-lg border-2 border-indigo-300 shadow-sm">
+                          <span className="text-sm text-indigo-900 font-bold whitespace-nowrap">250/page</span>
+                          <span className="text-indigo-400 font-bold">|</span>
                           <button
                             onClick={() => setStatusChangesPage(p => Math.max(1, p - 1))}
                             disabled={paginated.currentPage === 1}
-                            className={`px-3 py-1.5 rounded-md text-sm font-semibold transition whitespace-nowrap ${
+                            className={`px-3 py-1.5 rounded-md text-sm font-bold transition whitespace-nowrap ${
                               paginated.currentPage === 1
                                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-white border-2 border-gray-400 text-gray-700 hover:bg-gray-100 hover:border-gray-500'
+                                : 'bg-white border-2 border-indigo-500 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-600'
                             }`}
                           >
-                            ←
+                            ← Prev
                           </button>
                           <div className="flex gap-1">
                             {Array.from({ length: Math.min(10, paginated.totalPages) }, (_, i) => {
@@ -1082,7 +1082,7 @@ export default function PropertyDashboard() {
                                   className={`px-3 py-1.5 rounded-md text-sm font-bold transition min-w-[40px] ${
                                     paginated.currentPage === pageNum
                                       ? 'bg-indigo-600 text-white shadow-lg scale-105'
-                                      : 'bg-white border-2 border-indigo-400 text-gray-700 hover:bg-indigo-50 hover:border-indigo-500'
+                                      : 'bg-white border-2 border-indigo-400 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-500'
                                   }`}
                                 >
                                   {pageNum}
@@ -1093,23 +1093,23 @@ export default function PropertyDashboard() {
                           <button
                             onClick={() => setStatusChangesPage(p => Math.min(paginated.totalPages, p + 1))}
                             disabled={paginated.currentPage === paginated.totalPages}
-                            className={`px-3 py-1.5 rounded-md text-sm font-semibold transition whitespace-nowrap ${
+                            className={`px-3 py-1.5 rounded-md text-sm font-bold transition whitespace-nowrap ${
                               paginated.currentPage === paginated.totalPages
                                 ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-white border-2 border-gray-400 text-gray-700 hover:bg-gray-100 hover:border-gray-500'
+                                : 'bg-white border-2 border-indigo-500 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-600'
                             }`}
                           >
-                            →
+                            Next →
                           </button>
-                          <span className="text-sm text-gray-700 font-bold whitespace-nowrap ml-1">
-                            Page {paginated.currentPage} of {paginated.totalPages}
+                          <span className="text-sm text-indigo-900 font-bold whitespace-nowrap ml-2">
+                            Page {paginated.currentPage}/{paginated.totalPages}
                           </span>
                         </div>
                       );
                     })()}
                     <button
                       onClick={() => setShowStatusChanges(!showStatusChanges)}
-                      className="text-gray-600 hover:text-gray-800 px-4 py-2 rounded-md hover:bg-gray-100 text-sm font-semibold transition-colors whitespace-nowrap border border-gray-300"
+                      className="text-gray-700 hover:text-gray-900 px-4 py-2.5 rounded-md hover:bg-gray-100 text-sm font-bold transition-colors whitespace-nowrap border-2 border-gray-400 bg-white"
                     >
                       {showStatusChanges ? 'Hide' : 'Show'}
                     </button>
@@ -1305,8 +1305,8 @@ export default function PropertyDashboard() {
                               );
                             }
                             
-                            // Ensure we only render the paginated items (max 250)
-                            const itemsToRender = paginated.items.slice(0, statusChangesPerPage);
+                            // Use paginated items directly (already sliced to 250 max)
+                            const itemsToRender = paginated.items;
                             if (itemsToRender.length === 0) {
                               return (
                                 <tr>
