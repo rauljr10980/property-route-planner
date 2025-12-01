@@ -82,14 +82,15 @@ export default function PropertyList() {
   const fetchCADForAllVisible = async () => {
     const paginated = getPaginatedStatusChanges();
     
-    // Extract CAN values from properties - try multiple field names and locations
+    // Extract CAN values - check both comparison report structure and property structure
     const propertiesToFetch = paginated.items
       .map(change => {
-        // Check both change object and change.property for CAN
-        const prop = change.property || change;
+        // The change object might be from comparisonReport.statusChanges (has CAN directly)
+        // or from getStatusChanges() (has property.CAN)
         const changeObj = change;
+        const prop = change.property || change;
         
-        // Try multiple ways to get CAN - check change object first, then property
+        // Priority: change.CAN (from comparison report) > prop.CAN > other fields
         let can = changeObj.CAN || changeObj.can || changeObj['CAN'] || changeObj.identifier ||
                   prop.CAN || prop.can || prop['CAN'] || 
                   prop.propertyId || prop['Property ID'] || 
@@ -99,16 +100,22 @@ export default function PropertyList() {
         // Convert to string and clean
         if (can) {
           can = String(can).replace(/[\s-]/g, '').trim();
-          // Don't pad - CAN should already be 12 digits if it's valid
+          // Must be exactly 12 digits - don't pad, just validate
         }
         
-        return { can, prop, change, originalCan: prop.CAN || changeObj.CAN };
+        return { 
+          can, 
+          prop, 
+          change, 
+          originalCan: changeObj.CAN || prop.CAN,
+          hasChangeCAN: !!changeObj.CAN,
+          hasPropCAN: !!prop.CAN
+        };
       })
       .filter(({ can }) => {
-        // Check if CAN is valid (exactly 12 digits, no padding)
+        // Check if CAN is valid (exactly 12 digits)
         if (!can) return false;
         const cleaned = String(can).replace(/[\s-]/g, '').trim();
-        // Must be exactly 12 digits
         return /^\d{12}$/.test(cleaned);
       });
 
