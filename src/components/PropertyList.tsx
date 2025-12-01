@@ -34,137 +34,6 @@ export default function PropertyList() {
 
   // Note: CAD is automatically fetched on the backend during file processing
   // No need for browser-based fetching - just display the CAD value if it exists
-    const paginated = getPaginatedStatusChanges();
-    
-    // Extract CAN values - search through all properties to find matches
-    const propertiesToFetch = paginated.items
-      .map(change => {
-        const changeObj = change;
-        let prop = change.property || change;
-        
-        // Get any identifier from the change object to search with
-        const identifier = changeObj.CAN || changeObj.identifier || 
-                          prop.CAN || prop.id || prop.identifier ||
-                          prop.propertyId || prop['Property ID'];
-        
-        // Try to find full property from properties array using multiple matching strategies
-        let fullProp = null;
-        if (identifier) {
-          // Strategy 1: Match by CAN
-          fullProp = properties.find(p => {
-            const pCan = p.CAN || p['CAN'];
-            return pCan && String(pCan).trim() === String(identifier).trim();
-          });
-          
-          // Strategy 2: Match by id/propertyId
-          if (!fullProp) {
-            fullProp = properties.find(p => {
-              const pId = p.id || p.propertyId || p['Property ID'];
-              return pId && String(pId).trim() === String(identifier).trim();
-            });
-          }
-          
-          // Strategy 3: Match by address (if identifier matches property ID shown in table)
-          if (!fullProp && prop.ADDRSTRING) {
-            fullProp = properties.find(p => {
-              const pAddr = p.ADDRSTRING || p['ADDRSTRING'] || p.address || p.Address;
-              return pAddr && pAddr.trim() === prop.ADDRSTRING.trim();
-            });
-          }
-        }
-        
-        // Use full property if found, otherwise use the property from change
-        if (fullProp) {
-          prop = fullProp;
-        }
-        
-        // Get CAN - must be 12 digits
-        let can = prop.CAN || prop['CAN'] || 
-                  prop['Account Number'] || prop.accountNumber;
-        
-        // Convert to string and clean
-        if (can) {
-          can = String(can).replace(/[\s-]/g, '').trim();
-        }
-        
-        return { 
-          can, 
-          prop, 
-          change,
-          identifier,
-          foundFullProp: !!fullProp,
-          propHasCAN: !!(prop.CAN || prop['CAN'])
-        };
-      })
-      .filter(({ can }) => {
-        // Check if CAN is valid (exactly 12 digits)
-        if (!can) return false;
-        const cleaned = String(can).replace(/[\s-]/g, '').trim();
-        return /^\d{12}$/.test(cleaned);
-      });
-
-    console.log('=== CAD Fetch Debug ===');
-    console.log('Total items in view:', paginated.items.length);
-    console.log('Properties with valid CAN:', propertiesToFetch.length);
-    
-    if (propertiesToFetch.length > 0) {
-      console.log('✅ Sample CANs found:', propertiesToFetch.slice(0, 3).map(p => ({ 
-        can: p.can, 
-        identifier: p.identifier,
-        foundFullProp: p.foundFullProp
-      })));
-    } else {
-      // Debug: log what we found
-      const sampleItems = paginated.items.slice(0, 3);
-      console.log('❌ No valid CANs found. Sample items:', sampleItems.map(c => {
-        const prop = c.property || c;
-        return {
-          changeIdentifier: c.CAN || c.identifier,
-          propertyCAN: prop.CAN || prop['CAN'],
-          propertyId: prop.id || prop.propertyId || prop['Property ID'],
-          propertyKeys: Object.keys(prop).slice(0, 15),
-          allPropertiesCount: properties.length,
-          samplePropertyCAN: properties[0]?.CAN || properties[0]?.['CAN']
-        };
-      }));
-    }
-
-    if (propertiesToFetch.length === 0) {
-      alert(`No properties with valid CAN values found in current view.\n\nFound ${paginated.items.length} properties, but none have valid 12-digit CAN values.\n\nCheck browser console (F12) for details.`);
-      return;
-    }
-
-    setFetchingAllCAD(true);
-    let successCount = 0;
-    let failCount = 0;
-
-    // Fetch in batches with delays
-    const batchSize = 5;
-    for (let i = 0; i < propertiesToFetch.length; i += batchSize) {
-      const batch = propertiesToFetch.slice(i, i + batchSize);
-      
-      const batchPromises = batch.map(async ({ can, prop }) => {
-        try {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // 1 second delay between requests
-          await fetchCADForProperty(can, prop);
-          successCount++;
-        } catch (error) {
-          failCount++;
-          console.error(`Failed to fetch CAD for ${can}:`, error);
-        }
-      });
-
-      await Promise.all(batchPromises);
-      
-      // Delay between batches
-      if (i + batchSize < propertiesToFetch.length) {
-        await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between batches
-      }
-    }
-
-    setFetchingAllCAD(false);
-    alert(`CAD fetching complete: ${successCount} successful, ${failCount} failed`);
-  };
 
   useEffect(() => {
     loadData();
@@ -449,27 +318,6 @@ export default function PropertyList() {
               </span>
             </div>
             <button
-              onClick={fetchCADForAllVisible}
-              disabled={fetchingAllCAD || paginated.items.length === 0}
-              className={`px-4 py-2.5 rounded-md text-sm font-bold transition-colors whitespace-nowrap flex items-center gap-2 ${
-                fetchingAllCAD || paginated.items.length === 0
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed border-2 border-gray-300'
-                  : 'bg-purple-600 text-white hover:bg-purple-700 shadow-sm border-2 border-purple-700'
-              }`}
-            >
-              {fetchingAllCAD ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  Fetching CAD...
-                </>
-              ) : (
-                <>
-                  <Search className="w-4 h-4" />
-                  Fetch CAD for All ({paginated.items.length})
-                </>
-              )}
-            </button>
-            <button
               onClick={() => setShowStatusChanges(!showStatusChanges)}
               className="text-gray-700 hover:text-gray-900 px-4 py-2.5 rounded-md hover:bg-gray-100 text-sm font-bold transition-colors whitespace-nowrap border-2 border-gray-400 bg-white"
             >
@@ -641,9 +489,8 @@ export default function PropertyList() {
                       const tot_percan = prop.TOT_PERCAN || prop['TOT_PERCAN'] || '';
                       const addrstring = prop.ADDRSTRING || prop['ADDRSTRING'] || prop.address || prop.Address || '';
                       const zipCode = prop.ZIP_CODE || prop['ZIP_CODE'] || prop.zipCode || '';
-                      const cad = prop.CAD || prop.cadPropertyId || cadData.get(propertyId)?.cad || null;
-                      const isFetchingCAD = fetchingCAD.has(propertyId);
-                      const cadInfo = cadData.get(propertyId);
+                      // CAD is automatically fetched on backend during file processing
+                      const cad = prop.CAD || prop.cadPropertyId || null;
                       
                       return (
                         <tr key={idx} className="hover:bg-gray-50">
@@ -680,38 +527,17 @@ export default function PropertyList() {
                             {cad ? (
                               <div className="flex flex-col gap-1">
                                 <span className="text-xs font-mono font-semibold text-green-700">{cad}</span>
-                                {cadInfo?.propertyInfo && (
-                                  <button
-                                    onClick={() => window.open(`https://bexar.acttax.com/act_webdev/bexar/index.jsp`, '_blank')}
-                                    className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
-                                  >
-                                    <Search className="w-3 h-3" />
-                                    View
-                                  </button>
-                                )}
+                                <a
+                                  href={`https://bexar.acttax.com/act_webdev/bexar/index.jsp`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-indigo-600 hover:text-indigo-800 underline"
+                                >
+                                  View on Bexar County
+                                </a>
                               </div>
                             ) : (
-                              <button
-                                onClick={() => fetchCADForProperty(propertyId, prop)}
-                                disabled={isFetchingCAD}
-                                className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
-                                  isFetchingCAD
-                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                    : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-                                }`}
-                              >
-                                {isFetchingCAD ? (
-                                  <>
-                                    <RefreshCw className="w-3 h-3 animate-spin" />
-                                    Fetching...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Search className="w-3 h-3" />
-                                    Fetch CAD
-                                  </>
-                                )}
-                              </button>
+                              <span className="text-xs text-gray-400">Not available</span>
                             )}
                           </td>
                           <td className="px-3 py-2 text-xs text-gray-500">
