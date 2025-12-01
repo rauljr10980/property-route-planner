@@ -614,6 +614,73 @@ export default function FileHistory() {
             </div>
           )}
 
+          {/* CAD Fetching Progress */}
+          {cadProgress && cadProgress.stage === 'cad_fetching' && (
+            <div className="mb-6 bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-600"></div>
+                  <span className="text-sm font-semibold text-purple-800">Fetching CAD Data from Bexar County</span>
+                </div>
+                <span className="text-xs text-purple-600 font-mono">
+                  {cadProgress.processed} / {cadProgress.total}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
+                <div 
+                  className="bg-purple-600 h-3 rounded-full transition-all duration-300" 
+                  style={{ width: `${cadProgress.total > 0 ? (cadProgress.processed / cadProgress.total) * 100 : 0}%` }}
+                ></div>
+              </div>
+              <div className="grid grid-cols-4 gap-2 text-xs">
+                <div className="text-green-700">
+                  <strong>✓ Fetched:</strong> {cadProgress.cadFetched}
+                </div>
+                <div className="text-red-700">
+                  <strong>✗ Failed:</strong> {cadProgress.cadFailed}
+                </div>
+                <div className="text-gray-600">
+                  <strong>⊘ Skipped:</strong> {cadProgress.cadSkipped}
+                </div>
+                <div className="text-purple-700">
+                  <strong>Progress:</strong> {cadProgress.total > 0 ? ((cadProgress.processed / cadProgress.total) * 100).toFixed(1) : 0}%
+                </div>
+              </div>
+              {cadProgress.currentProperty && (
+                <div className="mt-2 text-xs text-gray-600 font-mono">
+                  Current: {cadProgress.currentProperty}
+                </div>
+              )}
+              {cadProgress.total > 0 && cadProgress.processed > 0 && cadProgress.startTime && (
+                <div className="mt-2 text-xs text-gray-500">
+                  Estimated time remaining: {Math.round(((cadProgress.total - cadProgress.processed) * (Date.now() - cadProgress.startTime) / cadProgress.processed) / 60000)} minutes
+                </div>
+              )}
+            </div>
+          )}
+
+          {cadProgress && cadProgress.stage === 'complete' && (
+            <div className="mb-6 bg-green-50 border-2 border-green-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
+                  <span className="text-white text-xs">✓</span>
+                </div>
+                <span className="text-sm font-semibold text-green-800">CAD Fetching Complete!</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-xs mt-2">
+                <div className="text-green-700">
+                  <strong>✓ Fetched:</strong> {cadProgress.cadFetched}
+                </div>
+                <div className="text-red-700">
+                  <strong>✗ Failed:</strong> {cadProgress.cadFailed}
+                </div>
+                <div className="text-gray-600">
+                  <strong>⊘ Skipped:</strong> {cadProgress.cadSkipped}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
