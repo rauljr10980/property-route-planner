@@ -1016,7 +1016,7 @@ async function fetchCADForCANOnce(can) {
           
           propertyInfo.paymentHistory.push({
             date: normalizedDate,
-            years: years.split(',').map((y: string) => y.trim()),
+            years: years.split(',').map(y => y.trim()),
             amount: parseFloat(amount.replace(/,/g, '')),
             payer: payer.trim()
           });
@@ -1046,7 +1046,7 @@ async function fetchCADForCANOnce(can) {
             
             propertyInfo.paymentHistory.push({
               date: normalizedDate,
-              years: yearText.split(',').map((y: string) => y.trim()),
+              years: yearText.split(',').map(y => y.trim()),
               amount: parseFloat(amountText.replace(/[$,]/g, '')),
               payer: payerText.trim()
             });
