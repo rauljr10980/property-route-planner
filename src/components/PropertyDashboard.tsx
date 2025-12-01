@@ -1526,8 +1526,19 @@ export default function PropertyDashboard() {
                               console.error(`🚨🚨🚨 IMPOSSIBLE: finalSafeItems has ${finalSafeItems.length} items after slice(0, 250)!`);
                             }
 
+                            // EMERGENCY: Absolutely ensure we NEVER render more than 250 items
+                            // This is a last resort if pagination fails
+                            const emergencyLimitedItems = finalSafeItems.slice(0, 250);
+
+                            console.log(`🚨 EMERGENCY CHECK: Rendering ${emergencyLimitedItems.length} rows (hard limited to 250)`);
+
                             // Render only the paginated items (max 250 per page for current filter)
-                            return finalSafeItems.map((change, idx) => {
+                            return emergencyLimitedItems.slice(0, 250).map((change, idx) => {
+                              // INLINE SAFETY: Skip if index >= 250 (should never happen but extra safe)
+                              if (idx >= 250) {
+                                console.error(`🚨🚨🚨 INDEX ${idx} EXCEEDS 250! Skipping this row.`);
+                                return null;
+                              }
                             const prop = change.property;
                             const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
                             const pnumber = prop.Pnumber || prop['Pnumber'] || '';
