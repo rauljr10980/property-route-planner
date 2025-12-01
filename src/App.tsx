@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, Home, History } from 'lucide-react';
+import { Menu, Home, History, List } from 'lucide-react';
 import { LoadScript } from '@react-google-maps/api';
 import PropertyDashboard from './components/PropertyDashboard';
+import PropertyList from './components/PropertyList';
 import FileHistory from './components/FileHistory';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -12,7 +13,7 @@ if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY') 
   console.warn('⚠️ Google Maps API key not configured. Please set VITE_GOOGLE_MAPS_API_KEY in your .env file');
 }
 
-type Tab = 'dashboard' | 'history';
+type Tab = 'dashboard' | 'list' | 'history';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard'); // Default to Dashboard tab
@@ -131,6 +132,17 @@ export default function App() {
                   <span className="font-medium">Dashboard</span>
                 </button>
                 <button
+                  onClick={() => setActiveTab('list')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    activeTab === 'list'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <List className="w-5 h-5" />
+                  <span className="font-medium">List</span>
+                </button>
+                <button
                   onClick={() => setActiveTab('history')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     activeTab === 'history'
@@ -178,6 +190,11 @@ export default function App() {
           {activeTab === 'dashboard' && (
             <ErrorBoundary>
               <PropertyDashboard />
+            </ErrorBoundary>
+          )}
+          {activeTab === 'list' && (
+            <ErrorBoundary>
+              <PropertyList />
             </ErrorBoundary>
           )}
           {activeTab === 'history' && (
