@@ -1166,15 +1166,25 @@ export default function PropertyDashboard() {
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                           {transitionFilter === 'j-to-deleted' ? (
-                            // Show dead leads (J to deleted)
-                            deadLeads.length === 0 ? (
-                              <tr>
-                                <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
-                                  No dead leads found (no Judgment properties were removed).
-                                </td>
-                              </tr>
-                            ) : (
-                              deadLeads.map((lead, idx) => (
+                            // Show dead leads (J to deleted) - with pagination
+                            (() => {
+                              const paginatedDeadLeads = (() => {
+                                const startIndex = (statusChangesPage - 1) * statusChangesPerPage;
+                                const endIndex = startIndex + statusChangesPerPage;
+                                return deadLeads.slice(startIndex, endIndex);
+                              })();
+                              
+                              if (deadLeads.length === 0) {
+                                return (
+                                  <tr>
+                                    <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
+                                      No dead leads found (no Judgment properties were removed).
+                                    </td>
+                                  </tr>
+                                );
+                              }
+                              
+                              return paginatedDeadLeads.map((lead, idx) => (
                                 <tr key={idx} className="hover:bg-red-50">
                                   <td className="px-3 py-2 text-xs text-gray-900">{lead.identifier || lead.CAN || 'N/A'}</td>
                                   <td className="px-3 py-2">
@@ -1195,8 +1205,8 @@ export default function PropertyDashboard() {
                                     <span className="text-xs text-gray-400">N/A</span>
                                   </td>
                                 </tr>
-                              ))
-                            )
+                              ));
+                            })()
                           ) : (() => {
                             const paginated = getPaginatedStatusChanges();
                             if (paginated.total === 0) {
@@ -1208,6 +1218,7 @@ export default function PropertyDashboard() {
                                 </tr>
                               );
                             }
+                            console.log(`📊 Rendering table: ${paginated.items.length} items (page ${paginated.currentPage} of ${paginated.totalPages}, total: ${paginated.total})`);
                             return paginated.items.map((change, idx) => {
                             const prop = change.property;
                             const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
