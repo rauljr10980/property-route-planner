@@ -1063,34 +1063,54 @@ export default function PropertyDashboard() {
                     <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300 mb-4">
                       <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider">Filter by Status Transition</h4>
                       <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => setTransitionFilter(null)}
-                          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                            transitionFilter === null
-                              ? 'bg-indigo-600 text-white shadow-sm'
-                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                          }`}
-                        >
-                          All Transitions ({getStatusChanges().length})
-                        </button>
-                        {[
-                          { key: 'blank-to-p', label: 'Blank → P', count: getStatusChanges().filter(c => c.oldStatus === 'Blank' && c.newStatus === 'P').length },
-                          { key: 'p-to-a', label: 'P → A', count: getStatusChanges().filter(c => c.oldStatus === 'P' && c.newStatus === 'A').length },
-                          { key: 'a-to-j', label: 'A → J', count: getStatusChanges().filter(c => c.oldStatus === 'A' && c.newStatus === 'J').length },
-                          { key: 'j-to-deleted', label: 'J → Deleted/New Owner', count: deadLeads.length }
-                        ].map((transition) => (
-                          <button
-                            key={transition.key}
-                            onClick={() => setTransitionFilter(transitionFilter === transition.key ? null : transition.key)}
-                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                              transitionFilter === transition.key
-                                ? 'bg-purple-600 text-white shadow-sm'
-                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                            }`}
-                          >
-                            {transition.label} ({transition.count})
-                          </button>
-                        ))}
+                        {(() => {
+                          const allChanges = getStatusChanges();
+                          const paginated = getPaginatedStatusChanges();
+                          const showingCount = Math.min(statusChangesPerPage, paginated.total);
+                          const totalCount = allChanges.length;
+                          
+                          return (
+                            <>
+                              <button
+                                onClick={() => setTransitionFilter(null)}
+                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                  transitionFilter === null
+                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                    : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                                }`}
+                                title={`Showing ${showingCount} of ${totalCount} on this page`}
+                              >
+                                All Transitions ({totalCount > statusChangesPerPage ? `${showingCount} of ${totalCount}` : totalCount})
+                              </button>
+                              {[
+                                { key: 'blank-to-p', label: 'Blank → P', count: allChanges.filter(c => c.oldStatus === 'Blank' && c.newStatus === 'P').length },
+                                { key: 'p-to-a', label: 'P → A', count: allChanges.filter(c => c.oldStatus === 'P' && c.newStatus === 'A').length },
+                                { key: 'a-to-j', label: 'A → J', count: allChanges.filter(c => c.oldStatus === 'A' && c.newStatus === 'J').length },
+                                { key: 'j-to-deleted', label: 'J → Deleted/New Owner', count: deadLeads.length }
+                              ].map((transition) => {
+                                const filteredCount = transition.key === 'j-to-deleted' 
+                                  ? Math.min(statusChangesPerPage, deadLeads.length)
+                                  : Math.min(statusChangesPerPage, transition.count);
+                                const showPagination = transition.count > statusChangesPerPage;
+                                
+                                return (
+                                  <button
+                                    key={transition.key}
+                                    onClick={() => setTransitionFilter(transitionFilter === transition.key ? null : transition.key)}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                      transitionFilter === transition.key
+                                        ? 'bg-purple-600 text-white shadow-sm'
+                                        : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                                    }`}
+                                    title={showPagination ? `Showing ${filteredCount} of ${transition.count} on this page` : undefined}
+                                  >
+                                    {transition.label} ({showPagination ? `${filteredCount} of ${transition.count}` : transition.count})
+                                  </button>
+                                );
+                              })}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -1098,56 +1118,70 @@ export default function PropertyDashboard() {
                     <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300">
                       <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider">Filter by New Status</h4>
                       <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() => {
-                            if (statusChangeFilter.size === 3) {
-                              setStatusChangeFilter(new Set());
-                            } else {
-                              setStatusChangeFilter(new Set(['J', 'A', 'P']));
-                            }
-                            setTransitionFilter(null); // Clear transition filter when using status filter
-                          }}
-                          className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                            statusChangeFilter.size === 3 && transitionFilter === null
-                              ? 'bg-indigo-600 text-white shadow-sm'
-                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                          }`}
-                        >
-                          All Properties with New Status ({getStatusChanges().length})
-                        </button>
-                        {(['J', 'A', 'P'] as const).map((status) => {
-                          const count = properties.filter(p => {
-                            const propStatus = p.currentStatus || getPropertyStatus(p);
-                            return propStatus === status;
-                          }).length;
-                          const isSelected = statusChangeFilter.has(status);
+                        {(() => {
+                          const allChanges = getStatusChanges();
+                          const paginated = getPaginatedStatusChanges();
+                          const showingCount = Math.min(statusChangesPerPage, paginated.total);
+                          const totalCount = allChanges.length;
+                          
                           return (
-                            <button
-                              key={status}
-                              onClick={() => {
-                                const newFilter = new Set(statusChangeFilter);
-                                if (isSelected) {
-                                  newFilter.delete(status);
-                                } else {
-                                  newFilter.add(status);
-                                }
-                                setStatusChangeFilter(newFilter);
-                                setTransitionFilter(null); // Clear transition filter when using status filter
-                              }}
-                              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                                isSelected && transitionFilter === null
-                                  ? status === 'J'
-                                    ? 'bg-red-600 text-white shadow-sm'
-                                    : status === 'A'
-                                    ? 'bg-yellow-600 text-white shadow-sm'
-                                    : 'bg-blue-600 text-white shadow-sm'
-                                  : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                              }`}
-                            >
-                              {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({count})
-                            </button>
+                            <>
+                              <button
+                                onClick={() => {
+                                  if (statusChangeFilter.size === 3) {
+                                    setStatusChangeFilter(new Set());
+                                  } else {
+                                    setStatusChangeFilter(new Set(['J', 'A', 'P']));
+                                  }
+                                  setTransitionFilter(null); // Clear transition filter when using status filter
+                                }}
+                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                  statusChangeFilter.size === 3 && transitionFilter === null
+                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                    : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                                }`}
+                                title={totalCount > statusChangesPerPage ? `Showing ${showingCount} of ${totalCount} on this page` : undefined}
+                              >
+                                All Properties with New Status ({totalCount > statusChangesPerPage ? `${showingCount} of ${totalCount}` : totalCount})
+                              </button>
+                              {(['J', 'A', 'P'] as const).map((status) => {
+                                const allStatusChanges = allChanges.filter(c => c.newStatus === status);
+                                const count = allStatusChanges.length;
+                                const showingCount = Math.min(statusChangesPerPage, count);
+                                const showPagination = count > statusChangesPerPage;
+                                const isSelected = statusChangeFilter.has(status);
+                                
+                                return (
+                                  <button
+                                    key={status}
+                                    onClick={() => {
+                                      const newFilter = new Set(statusChangeFilter);
+                                      if (isSelected) {
+                                        newFilter.delete(status);
+                                      } else {
+                                        newFilter.add(status);
+                                      }
+                                      setStatusChangeFilter(newFilter);
+                                      setTransitionFilter(null); // Clear transition filter when using status filter
+                                    }}
+                                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                      isSelected && transitionFilter === null
+                                        ? status === 'J'
+                                          ? 'bg-red-600 text-white shadow-sm'
+                                          : status === 'A'
+                                          ? 'bg-yellow-600 text-white shadow-sm'
+                                          : 'bg-blue-600 text-white shadow-sm'
+                                        : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                                    }`}
+                                    title={showPagination ? `Showing ${showingCount} of ${count} on this page` : undefined}
+                                  >
+                                    {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({showPagination ? `${showingCount} of ${count}` : count})
+                                  </button>
+                                );
+                              })}
+                            </>
                           );
-                        })}
+                        })()}
                       </div>
                     </div>
 
