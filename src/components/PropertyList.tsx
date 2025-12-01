@@ -585,1017 +585,387 @@ export default function PropertyList() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Comparison Report Section - Always visible at the top */}
-        {comparisonReport && (
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border-2 border-purple-200 p-6 mb-6">
-            <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <TrendingUp className="text-purple-600" size={24} />
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-900">File Comparison Report</h3>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Changes detected between previous file and latest upload
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowComparisonReport(!showComparisonReport)}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
-                  >
-                    {showComparisonReport ? 'Hide' : 'Show'} Report
-                  </button>
-                </div>
-
-            {showComparisonReport && (
-              <div className="space-y-4">
-                    {/* Summary Message */}
-                    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-                      <p className="text-sm text-gray-800">
-                        <strong>I've noticed that there are:</strong>
-                        <br />
-                        • <strong>{comparisonReport.summary?.statusChangesCount || 0}</strong> properties with status changes (J/A/P)
-                        {comparisonReport.summary?.legalStatusChangesCount !== undefined && (
-                          <> • <strong>{comparisonReport.summary.legalStatusChangesCount || 0}</strong> properties with LEGALSTATUS field changes</>
-                        )}
-                        {comparisonReport.summary?.foreclosedPropertiesCount > 0 && (
-                          <> • <strong className="text-red-700">{comparisonReport.summary.foreclosedPropertiesCount}</strong> <span className="text-red-700 font-semibold">DEAD LEADS</span> (were Judgment, now foreclosed/new owner)</>
-                        )}
-                        {(!comparisonReport.summary || 
-                          (comparisonReport.summary.statusChangesCount === 0 && 
-                           (comparisonReport.summary.legalStatusChangesCount || 0) === 0)) && (
-                          <span className="text-gray-500 italic"> (No changes detected in this upload)</span>
-                        )}
-                      </p>
-                    </div>
-
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                      <div className="bg-white p-4 rounded-lg border-2 border-green-300">
-                        <div className="text-green-600 font-semibold text-sm">New Properties</div>
-                        <div className="text-2xl font-bold text-green-900">
-                          {comparisonReport.summary?.newPropertiesCount || 0}
-                        </div>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg border-2 border-red-300">
-                        <div className="text-red-600 font-semibold text-sm">Removed</div>
-                        <div className="text-2xl font-bold text-red-900">
-                          {comparisonReport.summary?.removedPropertiesCount || 0}
-                        </div>
-                        {comparisonReport.summary?.foreclosedPropertiesCount > 0 && (
-                          <div className="text-xs text-red-700 mt-1 font-semibold">
-                            {comparisonReport.summary.foreclosedPropertiesCount} Dead Leads (Were Judgment)
-                          </div>
-                        )}
-                      </div>
-                      <div className="bg-white p-4 rounded-lg border-2 border-blue-300">
-                        <div className="text-blue-600 font-semibold text-sm">Status Changes</div>
-                        <div className="text-2xl font-bold text-blue-900">
-                          {comparisonReport.summary?.statusChangesCount || 0}
-                        </div>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg border-2 border-purple-300">
-                        <div className="text-purple-600 font-semibold text-sm">LEGALSTATUS Changes</div>
-                        <div className="text-2xl font-bold text-purple-900">
-                          {comparisonReport.summary?.legalStatusChangesCount || 0}
-                        </div>
-                      </div>
-                      <div className="bg-white p-4 rounded-lg border-2 border-gray-300">
-                        <div className="text-gray-600 font-semibold text-sm">Total Properties</div>
-                        <div className="text-2xl font-bold text-gray-900">
-                          {comparisonReport.summary?.totalPropertiesInNewFile?.toLocaleString() || 0}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Dead Leads Section */}
-                    {comparisonReport.foreclosedProperties && comparisonReport.foreclosedProperties.length > 0 && (
-                      <div className="bg-red-100 rounded-lg border-2 border-red-500 p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <AlertCircle className="text-red-700" size={20} />
-                          <h4 className="font-bold text-red-900 text-lg">⚠️ DEAD LEADS - Foreclosed/New Owner ({comparisonReport.foreclosedProperties.length})</h4>
-                        </div>
-                        <p className="text-sm text-red-800 mb-3 font-semibold">
-                          These properties were previously Judgment (J) and are no longer in the file. They have been foreclosed or have a new owner - these leads are no longer valid.
-                        </p>
-                        <div className="space-y-2 max-h-64 overflow-y-auto">
-                          {comparisonReport.foreclosedProperties.map((fp: any, idx: number) => (
-                            <div key={idx} className="text-xs p-3 bg-white border-2 border-red-300 rounded">
-                              <div className="font-semibold text-red-900">CAN: {fp.CAN || fp.identifier}</div>
-                              <div className="text-gray-700 truncate">{fp.address}</div>
-                              <div className="text-red-700 font-semibold mt-1">{fp.reason || 'Foreclosed or New Owner - Lead No Longer Valid'}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Removed Properties Sample */}
-                    {comparisonReport.removedProperties && comparisonReport.removedProperties.length > 0 && (
-                      <div className="bg-white rounded-lg border border-red-300 p-4">
-                        <h4 className="font-bold text-red-800 mb-2">Removed Properties (Sample)</h4>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                          {comparisonReport.removedProperties
-                            .filter((rp: any) => !rp.isForeclosed) // Exclude foreclosed (already shown above)
-                            .slice(0, 5)
-                            .map((rp: any, idx: number) => (
-                            <div key={idx} className="text-xs p-2 bg-red-50 rounded">
-                              <div className="font-semibold">CAN: {rp.CAN || rp.identifier}</div>
-                              <div className="text-gray-600 truncate">{rp.address}</div>
-                              {rp.previousStatus && (
-                                <div className="text-red-700 font-semibold">Was: {rp.previousStatus}</div>
-                              )}
-                            </div>
-                          ))}
-                          {comparisonReport.removedProperties.filter((rp: any) => !rp.isForeclosed).length > 5 && (
-                            <div className="text-xs text-gray-500 italic">
-                              +{comparisonReport.removedProperties.filter((rp: any) => !rp.isForeclosed).length - 5} more...
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Filter by Change Type */}
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
-                        <h4 className="font-bold text-gray-800">Filter by Change Type</h4>
-                        {/* Previous Status Dropdown - Only show for status changes */}
-                        {(changeFilter === 'all' || changeFilter === 'status') && (
-                          <div className="relative flex items-center gap-2">
-                            <label className="text-sm font-semibold text-gray-700 whitespace-nowrap">Previous Status:</label>
-                            <select
-                              value={previousStatusFilter}
-                              onChange={(e) => setPreviousStatusFilter(e.target.value as 'all' | 'J' | 'A' | 'P' | 'new')}
-                              className="px-4 py-2 rounded-md text-sm font-semibold bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer pr-8 min-w-[180px]"
-                            >
-                              <option value="all">All Properties</option>
-                              <option value="J">Judgment (J)</option>
-                              <option value="A">Active (A)</option>
-                              <option value="P">Pending (P)</option>
-                              <option value="new">New (No Previous Status)</option>
-                            </select>
-                            <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 pointer-events-none w-4 h-4" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-2 items-center">
-                        <button
-                          onClick={() => setChangeFilter('all')}
-                          className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-                            changeFilter === 'all'
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                          }`}
-                        >
-                          All Changes ({comparisonReport.summary.statusChangesCount + (comparisonReport.summary.legalStatusChangesCount || 0)})
-                        </button>
-                        <button
-                          onClick={() => setChangeFilter('status')}
-                          className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-                            changeFilter === 'status'
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                          }`}
-                        >
-                          Status Changes ({comparisonReport.summary.statusChangesCount})
-                        </button>
-                        <button
-                          onClick={() => setChangeFilter('legalstatus')}
-                          className={`px-4 py-2 rounded-md text-sm font-semibold transition ${
-                            changeFilter === 'legalstatus'
-                              ? 'bg-purple-600 text-white'
-                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                          }`}
-                        >
-                          LEGALSTATUS Changes ({comparisonReport.summary?.legalStatusChangesCount || 0})
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Status Change Breakdown */}
-                    {comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && (
-                      <div className="bg-white rounded-lg border border-gray-200 p-4">
-                        <h4 className="font-bold text-gray-800 mb-3">Status Change Breakdown (Click to filter)</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                          {(() => {
-                            // Get all unique changeTypes from actual data
-                            const changeTypeCounts: { [key: string]: number } = {};
-                            comparisonReport.statusChanges.forEach((sc: any) => {
-                              const changeType = sc.changeType || `${sc.oldStatus || 'Blank'}→${sc.newStatus || 'Blank'}`;
-                              changeTypeCounts[changeType] = (changeTypeCounts[changeType] || 0) + 1;
-                            });
-                            
-                            // Sort by count (descending) then by type
-                            const sortedTypes = Object.entries(changeTypeCounts)
-                              .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-                            
-                            return sortedTypes.map(([changeType, count]) => (
-                              <button
-                                key={changeType}
-                                onClick={() => {
-                                  if (selectedBreakdownTransition === changeType) {
-                                    setSelectedBreakdownTransition(null);
-                                    setTransitionFilter(null);
-                                  } else {
-                                    setSelectedBreakdownTransition(changeType);
-                                    // Clear transition filter when using breakdown filter
-                                    setTransitionFilter(null);
-                                  }
-                                }}
-                                className={`flex justify-between items-center p-2 rounded transition-all ${
-                                  selectedBreakdownTransition === changeType
-                                    ? 'bg-purple-600 text-white shadow-md'
-                                    : 'bg-gray-50 hover:bg-gray-100'
-                                }`}
-                              >
-                                <span className={`font-semibold ${selectedBreakdownTransition === changeType ? 'text-white' : 'text-gray-700'}`}>
-                                  {changeType}:
-                                </span>
-                                <span className={`font-bold ${selectedBreakdownTransition === changeType ? 'text-white' : 'text-gray-900'}`}>
-                                  {count}
-                                </span>
-                              </button>
-                            ));
-                          })()}
-                        </div>
-                        {selectedBreakdownTransition && (
-                          <div className="mt-3 text-xs text-gray-600">
-                            Showing properties with transition: <strong>{selectedBreakdownTransition}</strong>
-                            <button
-                              onClick={() => {
-                                setSelectedBreakdownTransition(null);
-                                setTransitionFilter(null);
-                              }}
-                              className="ml-2 text-purple-600 hover:text-purple-800 underline"
-                            >
-                              Clear filter
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Changes Table - Filtered by Change Type */}
-                    {((changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges) ||
-                     (changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges) ? (
-                      <div className="bg-white rounded-lg border border-blue-300 p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-bold text-blue-800">
-                            {changeFilter === 'status' && `Status Changes (${comparisonReport.statusChanges.length})`}
-                            {changeFilter === 'legalstatus' && `LEGALSTATUS Changes (${comparisonReport.legalStatusChanges.length})`}
-                            {changeFilter === 'all' && `All Changes (${comparisonReport.statusChanges.length + (comparisonReport.legalStatusChanges?.length || 0)})`}
-                          </h4>
-                          <p className="text-xs text-gray-500">
-                            💡 Tip: Go to Dashboard tab to see full property details
-                          </p>
-                        </div>
-                        <div className="overflow-x-auto max-h-96 overflow-y-auto">
-                          <table className="w-full text-sm">
-                            <thead className="bg-blue-50 sticky top-0">
-                              <tr>
-                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">CAN</th>
-                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Address</th>
-                                {changeFilter === 'status' || changeFilter === 'all' ? (
-                                  <>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Previous Status</th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">New Status</th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Change Type</th>
-                                  </>
-                                ) : null}
-                                {changeFilter === 'legalstatus' ? (
-                                  <>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Old LEGALSTATUS</th>
-                                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">New LEGALSTATUS</th>
-                                  </>
-                                ) : null}
-                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">Summary</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                              {/* Status Changes */}
-                              {(changeFilter === 'all' || changeFilter === 'status') && comparisonReport.statusChanges && comparisonReport.statusChanges.length > 0 && comparisonReport.statusChanges
-                                .filter((sc: any) => {
-                                  if (previousStatusFilter === 'all') return true;
-                                  if (previousStatusFilter === 'new') return sc.oldStatus === null;
-                                  return sc.oldStatus === previousStatusFilter;
-                                })
-                                .map((sc: any, idx: number) => (
-                                <tr key={`status-${idx}`} className="hover:bg-blue-50">
-                                  <td className="px-3 py-2 text-xs font-mono text-gray-900">
-                                    {sc.CAN || sc.identifier}
-                                  </td>
-                                  <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={sc.address}>
-                                    {sc.address}
-                                  </td>
-                                  {changeFilter === 'status' || changeFilter === 'all' ? (
-                                    <>
-                                      <td className="px-3 py-2">
-                                        {sc.oldStatus ? (
-                                          <span className={`px-2 py-1 text-xs font-medium rounded ${
-                                            sc.oldStatus === 'J' ? 'bg-red-100 text-red-800' :
-                                            sc.oldStatus === 'A' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-blue-100 text-blue-800'
-                                          }`}>
-                                            {sc.oldStatus === 'J' ? 'Judgment (J)' :
-                                             sc.oldStatus === 'A' ? 'Active (A)' :
-                                             'Pending (P)'}
-                                          </span>
-                                        ) : (
-                                          <span className="text-xs text-gray-400">NEW</span>
-                                        )}
-                                      </td>
-                                      <td className="px-3 py-2">
-                                        <span className={`px-2 py-1 text-xs font-medium rounded ${
-                                          sc.newStatus === 'J' ? 'bg-red-100 text-red-800' :
-                                          sc.newStatus === 'A' ? 'bg-yellow-100 text-yellow-800' :
-                                          'bg-blue-100 text-blue-800'
-                                        }`}>
-                                          {sc.newStatus === 'J' ? 'Judgment (J)' :
-                                           sc.newStatus === 'A' ? 'Active (A)' :
-                                           'Pending (P)'}
-                                        </span>
-                                      </td>
-                                      <td className="px-3 py-2">
-                                        <span className="text-xs font-semibold text-blue-700">
-                                          {sc.changeType}
-                                        </span>
-                                      </td>
-                                    </>
-                                  ) : null}
-                                  <td className="px-3 py-2 text-xs text-gray-600 italic">
-                                    {changeFilter === 'status' || changeFilter === 'all' 
-                                      ? `Status changed from ${sc.oldStatus || 'NEW'} to ${sc.newStatus}`
-                                      : ''}
-                                  </td>
-                                </tr>
-                              ))}
-                              
-                              {/* LEGALSTATUS Changes */}
-                              {changeFilter === 'legalstatus' && comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0 && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
-                                <tr key={`legalstatus-${idx}`} className="hover:bg-purple-50">
-                                  <td className="px-3 py-2 text-xs font-mono text-gray-900">
-                                    {ls.CAN || ls.identifier}
-                                  </td>
-                                  <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={ls.address}>
-                                    {ls.address}
-                                  </td>
-                                  <td className="px-3 py-2 text-xs text-gray-700">
-                                    {ls.oldLegalStatus || 'N/A'}
-                                  </td>
-                                  <td className="px-3 py-2 text-xs text-gray-700">
-                                    {ls.newLegalStatus || 'N/A'}
-                                  </td>
-                                  <td className="px-3 py-2 text-xs text-gray-600 italic">
-                                    LEGALSTATUS changed from "{ls.oldLegalStatus || 'N/A'}" to "{ls.newLegalStatus || 'N/A'}"
-                                  </td>
-                                </tr>
-                              ))}
-                              
-                              {/* All Changes Combined */}
-                              {changeFilter === 'all' && (
-                                <>
-                                  {comparisonReport.legalStatusChanges && comparisonReport.legalStatusChanges.length > 0 && comparisonReport.legalStatusChanges.map((ls: any, idx: number) => (
-                                    <tr key={`all-legalstatus-${idx}`} className="hover:bg-purple-50">
-                                      <td className="px-3 py-2 text-xs font-mono text-gray-900">
-                                        {ls.CAN || ls.identifier}
-                                      </td>
-                                      <td className="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" title={ls.address}>
-                                        {ls.address}
-                                      </td>
-                                      <td colSpan={3} className="px-3 py-2 text-xs text-gray-500 italic">
-                                        LEGALSTATUS Change
-                                      </td>
-                                      <td className="px-3 py-2 text-xs text-gray-600 italic">
-                                        LEGALSTATUS: "{ls.oldLegalStatus || 'N/A'}" → "{ls.newLegalStatus || 'N/A'}"
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </>
-                              )}
-                              
-                              {/* No Changes Message */}
-                              {((changeFilter === 'all' || changeFilter === 'status') && (!comparisonReport.statusChanges || comparisonReport.statusChanges.length === 0)) ||
-                               (changeFilter === 'legalstatus' && (!comparisonReport.legalStatusChanges || comparisonReport.legalStatusChanges.length === 0)) ? (
-                                <tr>
-                                  <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500 italic">
-                                    No {changeFilter === 'status' ? 'status' : changeFilter === 'legalstatus' ? 'LEGALSTATUS' : ''} changes detected in this upload.
-                                  </td>
-                                </tr>
-                              ) : null}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    ) : null}
-              </div>
-            )}
-          </div>
-        )}
-
         {properties.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
-            <AlertCircle className="mx-auto mb-4 text-gray-400" size={48} />
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No Data Yet</h3>
-            <p className="text-gray-600 mb-4">
-              Upload property data in the File History tab to see your dashboard
+            <p className="text-gray-600 text-lg mb-2">No property data available</p>
+            <p className="text-gray-500 text-sm">
+              Upload property data in the File History tab to see your property list
             </p>
           </div>
         ) : (
           <>
-            {/* Stats Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-                <div className="text-sm text-gray-600 mb-1">Total Properties</div>
-                <div className="text-3xl font-bold text-gray-900">{properties.length}</div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
-                <div className="text-sm text-gray-600 mb-1">Judgment (J)</div>
-                <div className="text-3xl font-bold text-red-600">
-                  {properties.filter(p => getPropertyStatus(p) === 'J').length}
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
-                <div className="text-sm text-gray-600 mb-1">Active (A)</div>
-                <div className="text-3xl font-bold text-yellow-600">
-                  {properties.filter(p => getPropertyStatus(p) === 'A').length}
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
-                <div className="text-sm text-gray-600 mb-1">Pending (P)</div>
-                <div className="text-3xl font-bold text-blue-600">
-                  {properties.filter(p => getPropertyStatus(p) === 'P').length}
-                </div>
-              </div>
-            </div>
-
-            {/* Status Changes Panel */}
-            {properties.length > 0 && (
-              <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-6 mb-6">
-                <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-800">
-                        Properties with New Status
-                        <span className="ml-2 text-sm font-normal text-gray-500">({getStatusChanges().length})</span>
-                        <span className="ml-2 text-xs font-semibold text-indigo-600">(250 per page)</span>
-                      </h2>
-                      <p className="text-xs text-gray-600 mt-1">
-                        These properties have received a new J, A, or P status since the last upload
-                      </p>
-                    </div>
+            {/* Status Changes Panel - This is the List Tab */}
+            <div className="bg-white rounded-lg shadow-xl border border-gray-200 p-6 mb-6">
+              <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-800">
+                      Properties with New Status
+                      <span className="ml-2 text-sm font-normal text-gray-500">({getStatusChanges().length})</span>
+                      <span className="ml-2 text-xs font-semibold text-indigo-600">(250 per page)</span>
+                    </h2>
+                    <p className="text-xs text-gray-600 mt-1">
+                      These properties have received a new J, A, or P status since the last upload
+                    </p>
                   </div>
-                  <div className="flex items-center gap-3 flex-nowrap">
-                    {/* Pagination Controls - Always visible next to Hide button */}
+                </div>
+                <div className="flex items-center gap-3 flex-nowrap">
+                  {/* Pagination Controls - Always visible */}
+                  {(() => {
+                    const paginated = getPaginatedStatusChanges();
+
+                    const startItem = (paginated.currentPage - 1) * statusChangesPerPage + 1;
+                    const endItem = Math.min(paginated.currentPage * statusChangesPerPage, paginated.total);
+
+                    return (
+                      <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2.5 rounded-lg border-2 border-indigo-300 shadow-sm">
+                        <span className="text-sm text-indigo-900 font-bold whitespace-nowrap">
+                          Showing {startItem}-{endItem} of {paginated.total}
+                        </span>
+                        <span className="text-indigo-400 font-bold">|</span>
+                        <button
+                          onClick={() => setStatusChangesPage(p => Math.max(1, p - 1))}
+                          disabled={paginated.currentPage === 1}
+                          className={`px-3 py-1.5 rounded-md text-sm font-bold transition whitespace-nowrap ${
+                            paginated.currentPage === 1
+                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                              : 'bg-white border-2 border-indigo-500 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-600'
+                          }`}
+                        >
+                          ← Prev
+                        </button>
+                        <div className="flex gap-1">
+                          {Array.from({ length: Math.min(10, paginated.totalPages) }, (_, i) => {
+                            let pageNum;
+                            if (paginated.totalPages <= 10) {
+                              pageNum = i + 1;
+                            } else if (paginated.currentPage <= 5) {
+                              pageNum = i + 1;
+                            } else if (paginated.currentPage >= paginated.totalPages - 4) {
+                              pageNum = paginated.totalPages - 9 + i;
+                            } else {
+                              pageNum = paginated.currentPage - 4 + i;
+                            }
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => setStatusChangesPage(pageNum)}
+                                className={`px-3 py-1.5 rounded-md text-sm font-bold transition min-w-[40px] ${
+                                  paginated.currentPage === pageNum
+                                    ? 'bg-indigo-600 text-white shadow-lg scale-105'
+                                    : 'bg-white border-2 border-indigo-400 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-500'
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          onClick={() => setStatusChangesPage(p => Math.min(paginated.totalPages, p + 1))}
+                          disabled={paginated.currentPage === paginated.totalPages}
+                          className={`px-3 py-1.5 rounded-md text-sm font-bold transition whitespace-nowrap ${
+                            paginated.currentPage === paginated.totalPages
+                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                              : 'bg-white border-2 border-indigo-500 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-600'
+                          }`}
+                        >
+                          Next →
+                        </button>
+                        <span className="text-sm text-indigo-900 font-bold whitespace-nowrap ml-2">
+                          Page {paginated.currentPage}/{paginated.totalPages}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* Transition Filter */}
+                <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300 mb-4">
+                  <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider">Filter by Status Transition</h4>
+                  <div className="flex flex-wrap gap-2">
                     {(() => {
-                      const paginated = getPaginatedStatusChanges();
-                      
-                      // Always show pagination controls - make them very prominent
-                      const startItem = (paginated.currentPage - 1) * statusChangesPerPage + 1;
-                      const endItem = Math.min(paginated.currentPage * statusChangesPerPage, paginated.total);
+                      const allChanges = getStatusChanges();
+                      const totalCount = allChanges.length;
+                      const showingCount = Math.min(statusChangesPerPage, totalCount);
 
                       return (
-                        <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2.5 rounded-lg border-2 border-indigo-300 shadow-sm">
-                          <span className="text-sm text-indigo-900 font-bold whitespace-nowrap">
-                            Showing {startItem}-{endItem} of {paginated.total}
-                          </span>
-                          <span className="text-indigo-400 font-bold">|</span>
+                        <>
                           <button
-                            onClick={() => setStatusChangesPage(p => Math.max(1, p - 1))}
-                            disabled={paginated.currentPage === 1}
-                            className={`px-3 py-1.5 rounded-md text-sm font-bold transition whitespace-nowrap ${
-                              paginated.currentPage === 1
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-white border-2 border-indigo-500 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-600'
+                            onClick={() => setTransitionFilter(null)}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                              transitionFilter === null
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
                             }`}
+                            title={totalCount > statusChangesPerPage ? `Showing ${showingCount} of ${totalCount} on this page` : undefined}
                           >
-                            ← Prev
+                            All Transitions ({totalCount > statusChangesPerPage ? `${statusChangesPerPage} of ${totalCount}` : totalCount})
                           </button>
-                          <div className="flex gap-1">
-                            {Array.from({ length: Math.min(10, paginated.totalPages) }, (_, i) => {
-                              let pageNum;
-                              if (paginated.totalPages <= 10) {
-                                pageNum = i + 1;
-                              } else if (paginated.currentPage <= 5) {
-                                pageNum = i + 1;
-                              } else if (paginated.currentPage >= paginated.totalPages - 4) {
-                                pageNum = paginated.totalPages - 9 + i;
-                              } else {
-                                pageNum = paginated.currentPage - 4 + i;
-                              }
-                              return (
-                                <button
-                                  key={pageNum}
-                                  onClick={() => setStatusChangesPage(pageNum)}
-                                  className={`px-3 py-1.5 rounded-md text-sm font-bold transition min-w-[40px] ${
-                                    paginated.currentPage === pageNum
-                                      ? 'bg-indigo-600 text-white shadow-lg scale-105'
-                                      : 'bg-white border-2 border-indigo-400 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-500'
-                                  }`}
-                                >
-                                  {pageNum}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <button
-                            onClick={() => setStatusChangesPage(p => Math.min(paginated.totalPages, p + 1))}
-                            disabled={paginated.currentPage === paginated.totalPages}
-                            className={`px-3 py-1.5 rounded-md text-sm font-bold transition whitespace-nowrap ${
-                              paginated.currentPage === paginated.totalPages
-                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                : 'bg-white border-2 border-indigo-500 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-600'
-                            }`}
-                          >
-                            Next →
-                          </button>
-                          <span className="text-sm text-indigo-900 font-bold whitespace-nowrap ml-2">
-                            Page {paginated.currentPage}/{paginated.totalPages}
-                          </span>
-                        </div>
+                          {[
+                            { key: 'blank-to-p', label: 'Blank → P', count: allChanges.filter(c => c.oldStatus === 'Blank' && c.newStatus === 'P').length },
+                            { key: 'p-to-a', label: 'P → A', count: allChanges.filter(c => c.oldStatus === 'P' && c.newStatus === 'A').length },
+                            { key: 'a-to-j', label: 'A → J', count: allChanges.filter(c => c.oldStatus === 'A' && c.newStatus === 'J').length },
+                            { key: 'j-to-deleted', label: 'J → Deleted/New Owner', count: deadLeads.length }
+                          ].map((transition) => {
+                            const showPagination = transition.count > statusChangesPerPage;
+
+                            return (
+                              <button
+                                key={transition.key}
+                                onClick={() => setTransitionFilter(transitionFilter === transition.key ? null : transition.key)}
+                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                                  transitionFilter === transition.key
+                                    ? 'bg-purple-600 text-white shadow-sm'
+                                    : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                                }`}
+                                title={showPagination ? `Showing ${statusChangesPerPage} of ${transition.count} on this page` : undefined}
+                              >
+                                {transition.label} ({showPagination ? `${statusChangesPerPage} of ${transition.count}` : transition.count})
+                              </button>
+                            );
+                          })}
+                        </>
                       );
                     })()}
-                    <button
-                      onClick={() => setShowStatusChanges(!showStatusChanges)}
-                      className="text-gray-700 hover:text-gray-900 px-4 py-2.5 rounded-md hover:bg-gray-100 text-sm font-bold transition-colors whitespace-nowrap border-2 border-gray-400 bg-white"
-                    >
-                      {showStatusChanges ? 'Hide' : 'Show'}
-                    </button>
                   </div>
                 </div>
 
-                {showStatusChanges && (
-                  <div className="space-y-4">
-                    {/* Transition Filter */}
-                    <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300 mb-4">
-                      <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider">Filter by Status Transition</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {(() => {
-                          const allChanges = getStatusChanges();
-                          const totalCount = allChanges.length;
-                          const showingCount = Math.min(statusChangesPerPage, totalCount);
-                          
-                          return (
-                            <>
-                              <button
-                                onClick={() => setTransitionFilter(null)}
-                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                                  transitionFilter === null
-                                    ? 'bg-indigo-600 text-white shadow-sm'
-                                    : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                                }`}
-                                title={totalCount > statusChangesPerPage ? `Showing ${showingCount} of ${totalCount} on this page` : undefined}
-                              >
-                                All Transitions ({totalCount > statusChangesPerPage ? `${statusChangesPerPage} of ${totalCount}` : totalCount})
-                              </button>
-                              {[
-                                { key: 'blank-to-p', label: 'Blank → P', count: allChanges.filter(c => c.oldStatus === 'Blank' && c.newStatus === 'P').length },
-                                { key: 'p-to-a', label: 'P → A', count: allChanges.filter(c => c.oldStatus === 'P' && c.newStatus === 'A').length },
-                                { key: 'a-to-j', label: 'A → J', count: allChanges.filter(c => c.oldStatus === 'A' && c.newStatus === 'J').length },
-                                { key: 'j-to-deleted', label: 'J → Deleted/New Owner', count: deadLeads.length }
-                              ].map((transition) => {
-                                const showPagination = transition.count > statusChangesPerPage;
-                                
-                                return (
-                                  <button
-                                    key={transition.key}
-                                    onClick={() => setTransitionFilter(transitionFilter === transition.key ? null : transition.key)}
-                                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                                      transitionFilter === transition.key
-                                        ? 'bg-purple-600 text-white shadow-sm'
-                                        : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                                    }`}
-                                    title={showPagination ? `Showing ${statusChangesPerPage} of ${transition.count} on this page` : undefined}
-                                  >
-                                    {transition.label} ({showPagination ? `${statusChangesPerPage} of ${transition.count}` : transition.count})
-                                  </button>
-                                );
-                              })}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
+                {/* Status Filter */}
+                <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300">
+                  <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider">Filter by New Status</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {(() => {
+                      const allChanges = getStatusChanges();
+                      const totalCount = allChanges.length;
 
-                    {/* Status Filter */}
-                    <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300">
-                      <h4 className="text-sm font-bold text-gray-800 mb-3 uppercase tracking-wider">Filter by New Status</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {(() => {
-                          const allChanges = getStatusChanges();
-                          const totalCount = allChanges.length;
-                          
-                          return (
-                            <>
+                      return (
+                        <>
+                          <button
+                            onClick={() => {
+                              if (statusChangeFilter.size === 3) {
+                                setStatusChangeFilter(new Set());
+                              } else {
+                                setStatusChangeFilter(new Set(['J', 'A', 'P']));
+                              }
+                              setTransitionFilter(null);
+                            }}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                              statusChangeFilter.size === 3 && transitionFilter === null
+                                ? 'bg-indigo-600 text-white shadow-sm'
+                                : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+                            }`}
+                            title={totalCount > statusChangesPerPage ? `Showing ${statusChangesPerPage} of ${totalCount} on this page` : undefined}
+                          >
+                            All Properties with New Status ({totalCount > statusChangesPerPage ? `${statusChangesPerPage} of ${totalCount}` : totalCount})
+                          </button>
+                          {(['J', 'A', 'P'] as const).map((status) => {
+                            const allStatusChanges = allChanges.filter(c => c.newStatus === status);
+                            const count = allStatusChanges.length;
+                            const showPagination = count > statusChangesPerPage;
+                            const isSelected = statusChangeFilter.has(status);
+
+                            return (
                               <button
+                                key={status}
                                 onClick={() => {
-                                  if (statusChangeFilter.size === 3) {
-                                    setStatusChangeFilter(new Set());
+                                  const newFilter = new Set(statusChangeFilter);
+                                  if (isSelected) {
+                                    newFilter.delete(status);
                                   } else {
-                                    setStatusChangeFilter(new Set(['J', 'A', 'P']));
+                                    newFilter.add(status);
                                   }
-                                  setTransitionFilter(null); // Clear transition filter when using status filter
+                                  setStatusChangeFilter(newFilter);
+                                  setTransitionFilter(null);
                                 }}
                                 className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                                  statusChangeFilter.size === 3 && transitionFilter === null
-                                    ? 'bg-indigo-600 text-white shadow-sm'
+                                  isSelected && transitionFilter === null
+                                    ? status === 'J'
+                                      ? 'bg-red-600 text-white shadow-sm'
+                                      : status === 'A'
+                                      ? 'bg-yellow-600 text-white shadow-sm'
+                                      : 'bg-blue-600 text-white shadow-sm'
                                     : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
                                 }`}
-                                title={totalCount > statusChangesPerPage ? `Showing ${statusChangesPerPage} of ${totalCount} on this page` : undefined}
+                                title={showPagination ? `Showing ${statusChangesPerPage} of ${count} on this page` : undefined}
                               >
-                                All Properties with New Status ({totalCount > statusChangesPerPage ? `${statusChangesPerPage} of ${totalCount}` : totalCount})
+                                {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({showPagination ? `${statusChangesPerPage} of ${count}` : count})
                               </button>
-                              {(['J', 'A', 'P'] as const).map((status) => {
-                                const allStatusChanges = allChanges.filter(c => c.newStatus === status);
-                                const count = allStatusChanges.length;
-                                const showPagination = count > statusChangesPerPage;
-                                const isSelected = statusChangeFilter.has(status);
-                                
-                                return (
-                                  <button
-                                    key={status}
-                                    onClick={() => {
-                                      const newFilter = new Set(statusChangeFilter);
-                                      if (isSelected) {
-                                        newFilter.delete(status);
-                                      } else {
-                                        newFilter.add(status);
-                                      }
-                                      setStatusChangeFilter(newFilter);
-                                      setTransitionFilter(null); // Clear transition filter when using status filter
-                                    }}
-                                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                                      isSelected && transitionFilter === null
-                                        ? status === 'J'
-                                          ? 'bg-red-600 text-white shadow-sm'
-                                          : status === 'A'
-                                          ? 'bg-yellow-600 text-white shadow-sm'
-                                          : 'bg-blue-600 text-white shadow-sm'
-                                        : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                                    }`}
-                                    title={showPagination ? `Showing ${statusChangesPerPage} of ${count} on this page` : undefined}
-                                  >
-                                    {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({showPagination ? `${statusChangesPerPage} of ${count}` : count})
-                                  </button>
-                                );
-                              })}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </div>
+                            );
+                          })}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
 
-                    {/* Status Changes Table */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full" style={{ tableLayout: 'fixed', maxWidth: '100%' }}>
-                        <thead className="bg-gray-100">
-                          <tr>
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Property ID</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>Previous Status</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>New Status</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '35%' }}>Additional Details</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '8%' }}>Days</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                          {transitionFilter === 'j-to-deleted' ? (
-                            // Show dead leads (J to deleted) - with pagination
-                            (() => {
-                              const paginatedDeadLeads = (() => {
-                                const startIndex = (statusChangesPage - 1) * statusChangesPerPage;
-                                const endIndex = startIndex + statusChangesPerPage;
-                                return deadLeads.slice(startIndex, endIndex);
-                              })();
-                              
-                              if (deadLeads.length === 0) {
-                                return (
-                                  <tr>
-                                    <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
-                                      No dead leads found (no Judgment properties were removed).
-                                    </td>
-                                  </tr>
-                                );
-                              }
-                              
-                              return paginatedDeadLeads.map((lead, idx) => (
-                                <tr key={idx} className="hover:bg-red-50">
-                                  <td className="px-3 py-2 text-xs text-gray-900">{lead.identifier || lead.CAN || 'N/A'}</td>
-                                  <td className="px-3 py-2">
-                                    <span className="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Judgment (J)</span>
-                                  </td>
-                                  <td className="px-3 py-2">
-                                    <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800">Deleted/New Owner</span>
-                                  </td>
-                                  <td className="px-3 py-2 text-xs text-gray-600">
-                                    <div className="space-y-1">
-                                      <div><strong>Address:</strong> {lead.address || 'N/A'}</div>
-                                      {lead.CAN && <div><strong>CAN:</strong> {lead.CAN}</div>}
-                                      <div className="text-red-600 font-semibold">⚠️ Foreclosed or New Owner - Lead No Longer Valid</div>
-                                    </div>
-                                  </td>
-                                  <td className="px-3 py-2 text-xs text-gray-500">N/A</td>
-                                  <td className="px-3 py-2">
-                                    <span className="text-xs text-gray-400">N/A</span>
-                                  </td>
-                                </tr>
-                              ));
-                            })()
-                          ) : (() => {
-                            const paginated = getPaginatedStatusChanges();
-                            if (paginated.total === 0) {
-                              return (
-                                <tr>
-                                  <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
-                                    No properties match the selected filters.
-                                  </td>
-                                </tr>
-                              );
-                            }
-                            
-                            // Use paginated items - already limited to 250 per page for THIS filter
-                            // Each filter (Judgment, Active, Pending, transitions) has its own pagination
-                            let itemsToRender = paginated.items;
+                {/* Status Changes Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full" style={{ tableLayout: 'fixed', maxWidth: '100%' }}>
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Property ID</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>Previous Status</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>New Status</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '35%' }}>Additional Details</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '8%' }}>Days</th>
+                        <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {transitionFilter === 'j-to-deleted' ? (
+                        // Show dead leads (J to deleted) - with pagination
+                        (() => {
+                          const paginatedDeadLeads = (() => {
+                            const startIndex = (statusChangesPage - 1) * statusChangesPerPage;
+                            const endIndex = startIndex + statusChangesPerPage;
+                            return deadLeads.slice(startIndex, endIndex);
+                          })();
 
-                            // HARD SAFETY LIMIT: Never render more than 250 items
-                            if (itemsToRender.length > 250) {
-                              console.warn(`⚠️ SAFETY LIMIT TRIGGERED: Attempting to render ${itemsToRender.length} items, limiting to 250`);
-                              itemsToRender = itemsToRender.slice(0, 250);
-                            }
-
-                            // Debug logging
-                            console.log(`📊 Table rendering: ${itemsToRender.length} items (Total in filter: ${paginated.total}, Page: ${paginated.currentPage}/${paginated.totalPages})`);
-
-                            if (itemsToRender.length === 0) {
-                              return (
-                                <tr>
-                                  <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
-                                    No properties on this page.
-                                  </td>
-                                </tr>
-                              );
-                            }
-                            
-                            // Render only the paginated items (max 250 per page for current filter)
-                            return itemsToRender.map((change, idx) => {
-                            const prop = change.property;
-                            const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
-                            const pnumber = prop.Pnumber || prop['Pnumber'] || '';
-                            const pstrname = prop.PSTRNAME || prop['PSTRNAME'] || '';
-                            const legalstatus = prop.LEGALSTATUS || prop['LEGALSTATUS'] || '';
-                            const tot_percan = prop.TOT_PERCAN || prop['TOT_PERCAN'] || '';
-                            const addrstring = prop.ADDRSTRING || prop['ADDRSTRING'] || prop.address || prop.Address || '';
-                            const zipCode = prop.ZIP_CODE || prop['ZIP_CODE'] || prop.zipCode || '';
-                            
+                          if (deadLeads.length === 0) {
                             return (
-                              <tr key={idx} className="hover:bg-gray-50">
-                                <td className="px-3 py-2 text-xs text-gray-900 font-mono">{propertyId}</td>
-                                <td className="px-3 py-2">
-                                  {change.oldStatus === 'Blank' ? (
-                                    <span className="text-xs text-gray-400">None</span>
-                                  ) : (
-                                    <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(change.oldStatus)}`}>
-                                      {getStatusLabel(change.oldStatus)}
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-3 py-2">
-                                  {change.newStatus === 'Blank' ? (
-                                    <span className="text-xs text-gray-400">None</span>
-                                  ) : (
-                                    <span className={`px-2 py-1 text-xs font-medium rounded ${
-                                      change.newStatus === 'J' ? 'bg-red-100 text-red-800' :
-                                      change.newStatus === 'A' ? 'bg-yellow-100 text-yellow-800' :
-                                      'bg-blue-100 text-blue-800'
-                                    }`}>
-                                      {change.newStatus === 'J' ? 'Judgment (J)' :
-                                       change.newStatus === 'A' ? 'Active (A)' :
-                                       'Pending Judgment (P)'}
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="px-3 py-2 text-xs text-gray-700">
-                                  <div className="space-y-1">
-                                    {pnumber && <div><strong>Pnumber (Q):</strong> {pnumber}</div>}
-                                    {pstrname && <div><strong>PSTRNAME (R):</strong> {pstrname}</div>}
-                                    {legalstatus && <div><strong>LEGALSTATUS (AE):</strong> {legalstatus}</div>}
-                                    {tot_percan && <div><strong>TOT_PERCAN (BE):</strong> {tot_percan}</div>}
-                                    {addrstring && <div><strong>Address (H):</strong> {addrstring}</div>}
-                                    {zipCode && <div><strong>ZIP (I):</strong> {zipCode}</div>}
-                                  </div>
-                                </td>
-                                <td className="px-3 py-2 text-xs text-gray-600">
-                                  {change.daysSinceChange === 0 ? 'Today' : `${change.daysSinceChange} day${change.daysSinceChange !== 1 ? 's' : ''} ago`}
-                                </td>
-                                <td className="px-3 py-2">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedProperty(prop);
-                                      if (prop.lat && prop.lng) {
-                                        setMapCenter({ lat: prop.lat, lng: prop.lng });
-                                        setMapZoom(15);
-                                      }
-                                    }}
-                                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                                  >
-                                    View Map
-                                  </button>
+                              <tr>
+                                <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
+                                  No dead leads found (no Judgment properties were removed).
                                 </td>
                               </tr>
                             );
-                            });
-                          })()}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                          }
 
-            {/* Map and Route Planning */}
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Map className="text-green-600" size={24} />
-                  <h2 className="text-2xl font-bold text-gray-900">Property Map</h2>
-                </div>
-                <div className="flex gap-2">
-                  {/* Status Filter for Map */}
-                  <div className="flex gap-2 border-r border-gray-300 pr-2 mr-2">
-                    {(['J', 'A', 'P'] as const).map((status) => {
-                      const count = properties.filter(p => getPropertyStatus(p) === status).length;
-                      const isSelected = statusFilter.has(status);
-                      return (
-                        <button
-                          key={status}
-                          onClick={() => toggleStatusFilter(status)}
-                          className={`px-3 py-2 rounded-md text-xs font-semibold transition ${
-                            isSelected
-                              ? status === 'J'
-                                ? 'bg-red-600 text-white'
-                                : status === 'A'
-                                ? 'bg-yellow-600 text-white'
-                                : 'bg-blue-600 text-white'
-                              : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                          }`}
-                        >
-                          {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({count})
-                        </button>
-                      );
-                    })}
-                  </div>
-                  
-                  {/* Route Creation Buttons */}
-                  <button
-                    onClick={() => createRoute(['J', 'A', 'P'])}
-                    disabled={filteredProps.filter(p => p.lat && p.lng).length === 0}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-semibold"
-                    title="Create optimized route for all filtered properties (minimizes travel distance)"
-                  >
-                    <Navigation className="w-4 h-4" />
-                    Create Optimized Route ({filteredProps.filter(p => p.lat && p.lng).length})
-                  </button>
-                </div>
-              </div>
+                          return paginatedDeadLeads.map((lead, idx) => (
+                            <tr key={idx} className="hover:bg-red-50">
+                              <td className="px-3 py-2 text-xs text-gray-900">{lead.identifier || lead.CAN || 'N/A'}</td>
+                              <td className="px-3 py-2">
+                                <span className="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Judgment (J)</span>
+                              </td>
+                              <td className="px-3 py-2">
+                                <span className="px-2 py-1 rounded text-xs font-semibold bg-gray-100 text-gray-800">Deleted/New Owner</span>
+                              </td>
+                              <td className="px-3 py-2 text-xs text-gray-600">
+                                <div className="space-y-1">
+                                  <div><strong>Address:</strong> {lead.address || 'N/A'}</div>
+                                  {lead.CAN && <div><strong>CAN:</strong> {lead.CAN}</div>}
+                                  <div className="text-red-600 font-semibold">⚠️ Foreclosed or New Owner - Lead No Longer Valid</div>
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 text-xs text-gray-500">N/A</td>
+                              <td className="px-3 py-2">
+                                <span className="text-xs text-gray-400">N/A</span>
+                              </td>
+                            </tr>
+                          ));
+                        })()
+                      ) : (() => {
+                        const paginated = getPaginatedStatusChanges();
+                        if (paginated.total === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
+                                No properties match the selected filters.
+                              </td>
+                            </tr>
+                          );
+                        }
 
-              {/* Google Maps */}
-              <div className="w-full h-[500px] bg-gray-100 rounded-lg border border-gray-300 overflow-hidden">
-                {mapLoaded ? (
-                  <GoogleMap
-                    mapContainerStyle={mapContainerStyle}
-                    center={mapCenter}
-                    zoom={mapZoom}
-                    onLoad={onMapLoad}
-                    options={{
-                      streetViewControl: true,
-                      mapTypeControl: true,
-                      fullscreenControl: true,
-                    }}
-                  >
-                    {filteredProps.filter(p => p.lat && p.lng).map((prop, idx) => {
-                      const status = prop.currentStatus || getPropertyStatus(prop);
-                      let iconColor = 'red';
-                      if (status === 'J') iconColor = 'red';
-                      else if (status === 'A') iconColor = 'yellow';
-                      else if (status === 'P') iconColor = 'green';
-                      
-                      return (
-                        <Marker
-                          key={idx}
-                          position={{ lat: prop.lat!, lng: prop.lng! }}
-                          onClick={() => {
-                            setSelectedProperty(prop);
-                            setMapCenter({ lat: prop.lat!, lng: prop.lng! });
-                            setMapZoom(15);
-                          }}
-                          icon={{
-                            url: `http://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`,
-                            scaledSize: new window.google.maps.Size(32, 32),
-                          }}
-                        >
-                          {selectedProperty && (selectedProperty.accountNumber || selectedProperty['Account Number']) === (prop.accountNumber || prop['Account Number']) && (
-                            <InfoWindow
-                              onCloseClick={() => setSelectedProperty(null)}
-                            >
-                              <div className="p-2">
-                                <p className="font-semibold text-sm">{prop.owner || prop.Owner || 'Unknown'}</p>
-                                <p className="text-xs text-gray-600 mt-1">{prop.address || prop.Address || prop.ADDRSTRING || 'No address'}</p>
-                                <p className="text-xs text-gray-600 mt-1">
-                                  Status: <span className="font-bold">{status || 'N/A'}</span>
-                                </p>
+                        // Use paginated items - already limited to 250 per page
+                        let itemsToRender = paginated.items;
+
+                        // HARD SAFETY LIMIT: Never render more than 250 items
+                        if (itemsToRender.length > 250) {
+                          console.warn(`⚠️ SAFETY LIMIT TRIGGERED: Attempting to render ${itemsToRender.length} items, limiting to 250`);
+                          itemsToRender = itemsToRender.slice(0, 250);
+                        }
+
+                        // Debug logging
+                        console.log(`📊 Table rendering: ${itemsToRender.length} items (Total in filter: ${paginated.total}, Page: ${paginated.currentPage}/${paginated.totalPages})`);
+
+                        if (itemsToRender.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan={6} className="px-3 py-8 text-center text-sm text-gray-500">
+                                No properties on this page.
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        // Render only the paginated items (max 250 per page for current filter)
+                        return itemsToRender.map((change, idx) => {
+                        const prop = change.property;
+                        const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
+                        const pnumber = prop.Pnumber || prop['Pnumber'] || '';
+                        const pstrname = prop.PSTRNAME || prop['PSTRNAME'] || '';
+                        const legalstatus = prop.LEGALSTATUS || prop['LEGALSTATUS'] || '';
+                        const tot_percan = prop.TOT_PERCAN || prop['TOT_PERCAN'] || '';
+                        const addrstring = prop.ADDRSTRING || prop['ADDRSTRING'] || prop.address || prop.Address || '';
+                        const zipCode = prop.ZIP_CODE || prop['ZIP_CODE'] || prop.zipCode || '';
+
+                        return (
+                          <tr key={idx} className="hover:bg-gray-50">
+                            <td className="px-3 py-2 text-xs text-gray-900 font-mono">{propertyId}</td>
+                            <td className="px-3 py-2">
+                              {change.oldStatus === 'Blank' ? (
+                                <span className="text-xs text-gray-400">None</span>
+                              ) : (
+                                <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(change.oldStatus)}`}>
+                                  {getStatusLabel(change.oldStatus)}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
+                              {change.newStatus === 'Blank' ? (
+                                <span className="text-xs text-gray-400">None</span>
+                              ) : (
+                                <span className={`px-2 py-1 text-xs font-medium rounded ${
+                                  change.newStatus === 'J' ? 'bg-red-100 text-red-800' :
+                                  change.newStatus === 'A' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {change.newStatus === 'J' ? 'Judgment (J)' :
+                                   change.newStatus === 'A' ? 'Active (A)' :
+                                   'Pending Judgment (P)'}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-xs text-gray-700">
+                              <div className="space-y-1">
+                                {pnumber && <div><strong>Pnumber (Q):</strong> {pnumber}</div>}
+                                {pstrname && <div><strong>PSTRNAME (R):</strong> {pstrname}</div>}
+                                {legalstatus && <div><strong>LEGALSTATUS (AE):</strong> {legalstatus}</div>}
+                                {tot_percan && <div><strong>TOT_PERCAN (BE):</strong> {tot_percan}</div>}
+                                {addrstring && <div><strong>Address (H):</strong> {addrstring}</div>}
+                                {zipCode && <div><strong>ZIP (I):</strong> {zipCode}</div>}
                               </div>
-                            </InfoWindow>
-                          )}
-                        </Marker>
-                      );
-                    })}
-                  </GoogleMap>
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <Map className="mx-auto mb-2 text-gray-400" size={48} />
-                      <p className="text-gray-600">Loading map...</p>
-                    </div>
-                  </div>
-                )}
+                            </td>
+                            <td className="px-3 py-2 text-xs text-gray-600">
+                              {change.daysSinceChange === 0 ? 'Today' : `${change.daysSinceChange} day${change.daysSinceChange !== 1 ? 's' : ''} ago`}
+                            </td>
+                            <td className="px-3 py-2">
+                              <button
+                                onClick={() => {
+                                  setSelectedProperty(prop);
+                                  if (prop.lat && prop.lng) {
+                                    setMapCenter({ lat: prop.lat, lng: prop.lng });
+                                    setMapZoom(15);
+                                  }
+                                }}
+                                className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                              >
+                                View Map
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                        });
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
-
-            {/* Trend Graph */}
-            {trendData.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Balance Trends Analysis</h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setTrendFilter('all')}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                        trendFilter === 'all'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Filter size={16} />
-                      All Trends
-                    </button>
-                    <button
-                      onClick={() => setTrendFilter('increasing')}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                        trendFilter === 'increasing'
-                          ? 'bg-red-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <TrendingUp size={16} />
-                      Increasing
-                    </button>
-                    <button
-                      onClick={() => setTrendFilter('stable')}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                        trendFilter === 'stable'
-                          ? 'bg-yellow-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Minus size={16} />
-                      Stable
-                    </button>
-                    <button
-                      onClick={() => setTrendFilter('decreasing')}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition ${
-                        trendFilter === 'decreasing'
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <TrendingDown size={16} />
-                      Decreasing
-                    </button>
-                  </div>
-                </div>
-                <ResponsiveContainer width="100%" height={350}>
-                  <LineChart data={trendData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="year" />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value: any) => `$${value.toLocaleString()}`}
-                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #ccc', borderRadius: '8px' }}
-                    />
-                    <Legend />
-                    <Line 
-                      type="monotone" 
-                      dataKey="average" 
-                      stroke="#3b82f6" 
-                      strokeWidth={3}
-                      name="Average Balance"
-                      dot={{ fill: '#3b82f6', r: 4 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
           </>
         )}
 
