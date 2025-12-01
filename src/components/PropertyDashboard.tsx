@@ -1146,10 +1146,17 @@ export default function PropertyDashboard() {
                     <div>
                       <h2 className="text-xl font-bold text-gray-800">
                         Properties with New Status
-                        <span className="ml-2 text-sm font-normal text-gray-500">({getStatusChanges().length})</span>
-                        <span className="ml-2 text-xs font-semibold text-indigo-600">(250 per page)</span>
-                        <span className="ml-2 text-xs font-mono bg-purple-100 text-purple-700 px-2 py-0.5 rounded" title="Code version - updates when you refresh">
-                          v{Date.now().toString().slice(-6)}
+                        <span className="ml-2 text-sm font-normal text-gray-500">
+                          (Total: {getStatusChanges().length})
+                        </span>
+                        <span className="ml-2 text-xs font-semibold bg-green-100 text-green-800 px-2 py-1 rounded border-2 border-green-400">
+                          Showing: {(() => {
+                            const pag = getPaginatedStatusChanges();
+                            return pag.items.length;
+                          })()} of 250 max per page
+                        </span>
+                        <span className="ml-2 text-xs font-mono bg-purple-100 text-purple-700 px-2 py-0.5 rounded" title="Build timestamp - changes when code updates">
+                          Build: {new Date().toLocaleTimeString()}
                         </span>
                       </h2>
                       <p className="text-xs text-gray-600 mt-1">
@@ -1356,19 +1363,56 @@ export default function PropertyDashboard() {
                     {/* DEBUG: Visual row count indicator */}
                     {(() => {
                       const paginated = getPaginatedStatusChanges();
+
+                      // Add a useEffect to count actual DOM rows after render
+                      React.useEffect(() => {
+                        const timer = setTimeout(() => {
+                          const table = document.querySelector('.status-changes-table');
+                          if (table) {
+                            const rows = table.querySelectorAll('tbody tr');
+                            const actualRowCount = rows.length;
+                            console.log(`🔍 ACTUAL DOM ROW COUNT: ${actualRowCount} (should be ≤ 250)`);
+
+                            if (actualRowCount > 250) {
+                              console.error(`🚨 CRITICAL BUG: Table has ${actualRowCount} rows in DOM, but should have ≤ 250!`);
+                            } else {
+                              console.log(`✅ PAGINATION WORKING: Table has ${actualRowCount} rows (≤ 250)`);
+                            }
+                          }
+                        }, 100);
+                        return () => clearTimeout(timer);
+                      }, [paginated.currentPage, transitionFilter, selectedBreakdownTransition, statusChangeFilter]);
+
                       return (
-                        <div className="mb-3 p-3 bg-yellow-100 border-2 border-yellow-500 rounded-lg">
-                          <div className="text-sm font-bold text-yellow-900">
-                            🐛 DEBUG INFO (This will be removed after debugging)
+                        <div className="mb-3 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg shadow-md">
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="text-lg font-bold text-yellow-900">
+                              🐛 PAGINATION DEBUG
+                            </div>
+                            <div className="text-xs bg-yellow-200 text-yellow-900 px-2 py-1 rounded font-mono">
+                              This message will be removed after fixing
+                            </div>
                           </div>
-                          <div className="text-xs text-yellow-800 mt-1">
-                            • Table should render <strong>{paginated.items.length}</strong> rows (max 250 per page)
-                            <br />
-                            • Total filtered items: <strong>{paginated.total}</strong>
-                            <br />
-                            • Current page: <strong>{paginated.currentPage}</strong> of <strong>{paginated.totalPages}</strong>
-                            <br />
-                            • Open browser console (F12) to see detailed logs
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                            <div className="bg-white p-2 rounded border border-yellow-300">
+                              <div className="text-xs text-gray-600">Expected Rows:</div>
+                              <div className="text-lg font-bold text-indigo-700">{paginated.items.length}</div>
+                            </div>
+                            <div className="bg-white p-2 rounded border border-yellow-300">
+                              <div className="text-xs text-gray-600">Max Per Page:</div>
+                              <div className="text-lg font-bold text-green-700">250</div>
+                            </div>
+                            <div className="bg-white p-2 rounded border border-yellow-300">
+                              <div className="text-xs text-gray-600">Current Page:</div>
+                              <div className="text-lg font-bold text-purple-700">{paginated.currentPage}/{paginated.totalPages}</div>
+                            </div>
+                            <div className="bg-white p-2 rounded border border-yellow-300">
+                              <div className="text-xs text-gray-600">Total Items:</div>
+                              <div className="text-lg font-bold text-blue-700">{paginated.total}</div>
+                            </div>
+                          </div>
+                          <div className="mt-2 text-xs text-yellow-800">
+                            📊 <strong>Instructions:</strong> Scroll down and manually count rows in table - should see exactly <strong>{paginated.items.length}</strong> rows (never more than 250)
                           </div>
                         </div>
                       );
@@ -1376,7 +1420,7 @@ export default function PropertyDashboard() {
 
                     {/* Status Changes Table */}
                     <div className="overflow-x-auto">
-                      <table className="w-full" style={{ tableLayout: 'fixed', maxWidth: '100%' }}>
+                      <table className="w-full status-changes-table" style={{ tableLayout: 'fixed', maxWidth: '100%' }}>
                         <thead className="bg-gray-100">
                           <tr>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '15%' }}>Property ID</th>
