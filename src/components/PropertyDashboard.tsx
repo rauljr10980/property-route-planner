@@ -388,9 +388,6 @@ export default function PropertyDashboard() {
     const endIndex = startIndex + statusChangesPerPage;
     const paginatedItems = allChanges.slice(startIndex, endIndex);
     
-    // Debug logging
-    console.log(`📄 Pagination: Page ${statusChangesPage}, Items per page: ${statusChangesPerPage}, Total: ${allChanges.length}, Showing: ${paginatedItems.length} items (indices ${startIndex}-${endIndex})`);
-    
     return {
       items: paginatedItems,
       total: allChanges.length,
@@ -1324,7 +1321,7 @@ export default function PropertyDashboard() {
                         </tbody>
                       </table>
                       
-                      {/* Pagination Controls */}
+                      {/* Pagination Controls - Always show when more than 250 items */}
                       {(() => {
                         const paginated = getPaginatedStatusChanges();
                         
@@ -1334,7 +1331,7 @@ export default function PropertyDashboard() {
                         }
                         
                         return (
-                          <div className="mt-6 flex items-center justify-between border-t-4 border-indigo-500 pt-6 bg-indigo-50 p-6 rounded-lg shadow-lg">
+                          <div className="mt-6 flex items-center justify-between border-t-4 border-indigo-500 pt-6 bg-indigo-50 p-6 rounded-lg shadow-lg" style={{ minHeight: '80px' }}>
                             <div className="flex items-center gap-3 text-base font-semibold text-gray-800">
                               <span className="bg-white px-4 py-2 rounded-lg border-2 border-indigo-300">
                                 Showing <strong className="text-indigo-700">{(paginated.currentPage - 1) * statusChangesPerPage + 1}</strong> to{' '}

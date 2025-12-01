@@ -443,7 +443,7 @@ app.get('/api/download', async (req, res) => {
     // Set headers for file download
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    
+
     // Stream file to response
     const stream = fileRef.createReadStream();
     stream.on('error', (error) => {
@@ -456,7 +456,7 @@ app.get('/api/download', async (req, res) => {
   } catch (error) {
     console.error('Download error:', error);
     if (!res.headersSent) {
-      res.status(500).json({ error: error.message || 'Download failed' });
+    res.status(500).json({ error: error.message || 'Download failed' });
     }
   }
 });
@@ -1444,23 +1444,23 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         });
         
         if (newStatus) {
-          // New property with status
-          newStatusChanges.push({
-            property,
-            oldStatus: null,
-            newStatus,
+        // New property with status
+        newStatusChanges.push({
+          property,
+          oldStatus: null,
+          newStatus,
             daysSinceChange: 0,
             identifier,
             address: propData.ADDRSTRING || propData.address || 'N/A',
             CAN: propData.CAN || null
-          });
+        });
         }
       }
 
       processedProperties.push(property);
       processedIds.add(identifier);
     });
-    
+
     // Find removed properties (existed in old file but not in new file)
     const removedProperties = [];
     const foreclosedProperties = []; // Properties that were Judgment (J) and got removed (foreclosed/new owner - dead leads)

@@ -361,7 +361,7 @@ export default function FileHistory() {
       if (entry.storagePath) {
         // Use reprocess endpoint (more efficient - no download needed)
         setProcessingProgress({ progress: 10, message: 'Reprocessing file from cloud storage...' });
-        
+      
         try {
           // Ensure storagePath doesn't have double "files/" prefix
           let storagePath = entry.storagePath || '';
@@ -425,32 +425,32 @@ export default function FileHistory() {
         });
 
         // Process using server-side processing
-        setProcessingProgress({ progress: 30, message: 'Processing file on server...' });
-        
-        const result = await gcsStorage.processFile(
-          file,
-          existingProperties,
-          entry.uploadDate,
-          (progress, message) => {
-            setProcessingProgress({ progress, message });
-          }
-        );
+      setProcessingProgress({ progress: 30, message: 'Processing file on server...' });
+      
+      const result = await gcsStorage.processFile(
+        file,
+        existingProperties,
+        entry.uploadDate,
+        (progress, message) => {
+          setProcessingProgress({ progress, message });
+        }
+      );
 
         const mergedProperties = result.properties || [];
         const newStatusChanges = result.newStatusChanges || [];
 
         // Save merged properties to shared storage
         if (mergedProperties.length > 0) {
-          await saveSharedProperties(mergedProperties, entry.uploadDate);
+      await saveSharedProperties(mergedProperties, entry.uploadDate);
         }
 
         // Load comparison report
 
-        setProcessingProgress(null);
+      setProcessingProgress(null);
 
-        if (newStatusChanges.length > 0) {
+      if (newStatusChanges.length > 0) {
           alert(`File "${entry.filename}" reloaded and processed!\n\n${mergedProperties.length} total properties\n${newStatusChanges.length} status changes detected.\n\nCheck the File Comparison Report to see all changes.`);
-        } else {
+      } else {
           alert(`File "${entry.filename}" reloaded and processed!\n\n${mergedProperties.length} total properties\n\nCheck the File Comparison Report to see all changes.`);
         }
       } else {
@@ -608,7 +608,7 @@ export default function FileHistory() {
               </div>
             </div>
           </div>
-          </div>
+        </div>
 
           {/* File List */}
         {filteredFiles.length > 0 ? (
@@ -1126,7 +1126,7 @@ export default FileHistory;
             </div>
           )}
 
-          {/* File List */}
+        {/* File List */}
         {filteredFiles.length > 0 ? (
           <div className="space-y-4">
             {filteredFiles.map((file) => (
