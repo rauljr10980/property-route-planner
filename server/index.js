@@ -21,7 +21,8 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 // CORS: Restrict to GitHub Pages domain for security
 const allowedOrigins = [
-  'https://rauljr10980.github.io',
+  'https://rauljr10980.github.io', // Base domain
+  'https://rauljr10980.github.io/property-route-planner', // Full GitHub Pages URL
   'http://localhost:3000',
   'http://localhost:5173', // Vite dev server
   'http://127.0.0.1:3000',
