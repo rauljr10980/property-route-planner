@@ -1245,12 +1245,12 @@ export default function PropertyDashboard() {
                       <table className="w-full" style={{ tableLayout: 'fixed', maxWidth: '100%' }}>
                         <thead className="bg-gray-100">
                           <tr>
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '15%' }}>Property ID</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Property ID</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>Previous Status</th>
                             <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>New Status</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '40%' }}>Additional Details</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Days</th>
-                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '11%' }}>Action</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '35%' }}>Additional Details</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '8%' }}>Days</th>
+                            <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
