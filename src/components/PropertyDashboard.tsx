@@ -1346,16 +1346,16 @@ export default function PropertyDashboard() {
                         console.log(`✅ Showing pagination controls for ${paginated.total} items across ${paginated.totalPages} pages`);
                         
                         return (
-                          <div className="mt-4 flex items-center justify-between border-t-2 border-gray-300 pt-4 bg-gray-50 p-4 rounded-lg">
-                            <div className="flex items-center gap-2 text-sm text-gray-700">
-                              <span>
-                                Showing <strong>{(paginated.currentPage - 1) * statusChangesPerPage + 1}</strong> to{' '}
-                                <strong>{Math.min(paginated.currentPage * statusChangesPerPage, paginated.total)}</strong> of{' '}
-                                <strong>{paginated.total.toLocaleString()}</strong> properties
+                          <div className="mt-6 flex items-center justify-between border-t-4 border-indigo-500 pt-6 bg-indigo-50 p-6 rounded-lg shadow-lg">
+                            <div className="flex items-center gap-3 text-base font-semibold text-gray-800">
+                              <span className="bg-white px-4 py-2 rounded-lg border-2 border-indigo-300">
+                                Showing <strong className="text-indigo-700">{(paginated.currentPage - 1) * statusChangesPerPage + 1}</strong> to{' '}
+                                <strong className="text-indigo-700">{Math.min(paginated.currentPage * statusChangesPerPage, paginated.total)}</strong> of{' '}
+                                <strong className="text-indigo-700">{paginated.total.toLocaleString()}</strong> properties
                               </span>
-                              <span className="text-gray-400">|</span>
-                              <span>
-                                Page <strong>{paginated.currentPage}</strong> of <strong>{paginated.totalPages}</strong>
+                              <span className="text-indigo-400 text-xl">|</span>
+                              <span className="bg-white px-4 py-2 rounded-lg border-2 border-indigo-300">
+                                Page <strong className="text-indigo-700">{paginated.currentPage}</strong> of <strong className="text-indigo-700">{paginated.totalPages}</strong>
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
