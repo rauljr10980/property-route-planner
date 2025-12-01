@@ -1042,27 +1042,27 @@ export default function PropertyDashboard() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    {/* Pagination Controls - Always visible */}
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {/* Pagination Controls - Always visible next to Hide button */}
                     {(() => {
                       const paginated = getPaginatedStatusChanges();
                       
                       // Always show pagination controls
                       return (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-500 font-medium mr-1">250 per page:</span>
+                        <div className="flex items-center gap-2 flex-nowrap">
+                          <span className="text-xs text-gray-500 font-semibold whitespace-nowrap">250/page:</span>
                           <button
                             onClick={() => setStatusChangesPage(p => Math.max(1, p - 1))}
                             disabled={paginated.currentPage === 1}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                            className={`px-2 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap ${
                               paginated.currentPage === 1
                                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
                             }`}
                           >
-                            Previous
+                            Prev
                           </button>
-                          <div className="flex gap-1 flex-wrap">
+                          <div className="flex gap-1 flex-nowrap">
                             {Array.from({ length: Math.min(10, paginated.totalPages) }, (_, i) => {
                               let pageNum;
                               if (paginated.totalPages <= 10) {
@@ -1078,7 +1078,7 @@ export default function PropertyDashboard() {
                                 <button
                                   key={pageNum}
                                   onClick={() => setStatusChangesPage(pageNum)}
-                                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition min-w-[36px] ${
+                                  className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition min-w-[32px] ${
                                     paginated.currentPage === pageNum
                                       ? 'bg-indigo-600 text-white shadow-md'
                                       : 'bg-white border border-indigo-300 text-gray-700 hover:bg-indigo-50 hover:border-indigo-400'
@@ -1092,7 +1092,7 @@ export default function PropertyDashboard() {
                           <button
                             onClick={() => setStatusChangesPage(p => Math.min(paginated.totalPages, p + 1))}
                             disabled={paginated.currentPage === paginated.totalPages}
-                            className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                            className={`px-2 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap ${
                               paginated.currentPage === paginated.totalPages
                                 ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                                 : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -1100,15 +1100,15 @@ export default function PropertyDashboard() {
                           >
                             Next
                           </button>
-                          <span className="text-sm text-gray-600 font-medium">
-                            Page {paginated.currentPage} of {paginated.totalPages}
+                          <span className="text-xs text-gray-600 font-medium whitespace-nowrap">
+                            {paginated.currentPage}/{paginated.totalPages}
                           </span>
                         </div>
                       );
                     })()}
                     <button
                       onClick={() => setShowStatusChanges(!showStatusChanges)}
-                      className="text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-100 text-sm font-medium transition-colors"
+                      className="text-gray-600 hover:text-gray-800 px-3 py-1.5 rounded-md hover:bg-gray-100 text-sm font-medium transition-colors whitespace-nowrap"
                     >
                       {showStatusChanges ? 'Hide' : 'Show'}
                     </button>
