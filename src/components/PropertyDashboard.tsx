@@ -1065,9 +1065,8 @@ export default function PropertyDashboard() {
                       <div className="flex flex-wrap gap-2">
                         {(() => {
                           const allChanges = getStatusChanges();
-                          const paginated = getPaginatedStatusChanges();
-                          const showingCount = Math.min(statusChangesPerPage, paginated.total);
                           const totalCount = allChanges.length;
+                          const showingCount = Math.min(statusChangesPerPage, totalCount);
                           
                           return (
                             <>
@@ -1078,9 +1077,9 @@ export default function PropertyDashboard() {
                                     ? 'bg-indigo-600 text-white shadow-sm'
                                     : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
                                 }`}
-                                title={`Showing ${showingCount} of ${totalCount} on this page`}
+                                title={totalCount > statusChangesPerPage ? `Showing ${showingCount} of ${totalCount} on this page` : undefined}
                               >
-                                All Transitions ({totalCount > statusChangesPerPage ? `${showingCount} of ${totalCount}` : totalCount})
+                                All Transitions ({totalCount > statusChangesPerPage ? `${statusChangesPerPage} of ${totalCount}` : totalCount})
                               </button>
                               {[
                                 { key: 'blank-to-p', label: 'Blank → P', count: allChanges.filter(c => c.oldStatus === 'Blank' && c.newStatus === 'P').length },
@@ -1088,9 +1087,6 @@ export default function PropertyDashboard() {
                                 { key: 'a-to-j', label: 'A → J', count: allChanges.filter(c => c.oldStatus === 'A' && c.newStatus === 'J').length },
                                 { key: 'j-to-deleted', label: 'J → Deleted/New Owner', count: deadLeads.length }
                               ].map((transition) => {
-                                const filteredCount = transition.key === 'j-to-deleted' 
-                                  ? Math.min(statusChangesPerPage, deadLeads.length)
-                                  : Math.min(statusChangesPerPage, transition.count);
                                 const showPagination = transition.count > statusChangesPerPage;
                                 
                                 return (
@@ -1102,9 +1098,9 @@ export default function PropertyDashboard() {
                                         ? 'bg-purple-600 text-white shadow-sm'
                                         : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
                                     }`}
-                                    title={showPagination ? `Showing ${filteredCount} of ${transition.count} on this page` : undefined}
+                                    title={showPagination ? `Showing ${statusChangesPerPage} of ${transition.count} on this page` : undefined}
                                   >
-                                    {transition.label} ({showPagination ? `${filteredCount} of ${transition.count}` : transition.count})
+                                    {transition.label} ({showPagination ? `${statusChangesPerPage} of ${transition.count}` : transition.count})
                                   </button>
                                 );
                               })}
@@ -1120,8 +1116,6 @@ export default function PropertyDashboard() {
                       <div className="flex flex-wrap gap-2">
                         {(() => {
                           const allChanges = getStatusChanges();
-                          const paginated = getPaginatedStatusChanges();
-                          const showingCount = Math.min(statusChangesPerPage, paginated.total);
                           const totalCount = allChanges.length;
                           
                           return (
@@ -1140,14 +1134,13 @@ export default function PropertyDashboard() {
                                     ? 'bg-indigo-600 text-white shadow-sm'
                                     : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
                                 }`}
-                                title={totalCount > statusChangesPerPage ? `Showing ${showingCount} of ${totalCount} on this page` : undefined}
+                                title={totalCount > statusChangesPerPage ? `Showing ${statusChangesPerPage} of ${totalCount} on this page` : undefined}
                               >
-                                All Properties with New Status ({totalCount > statusChangesPerPage ? `${showingCount} of ${totalCount}` : totalCount})
+                                All Properties with New Status ({totalCount > statusChangesPerPage ? `${statusChangesPerPage} of ${totalCount}` : totalCount})
                               </button>
                               {(['J', 'A', 'P'] as const).map((status) => {
                                 const allStatusChanges = allChanges.filter(c => c.newStatus === status);
                                 const count = allStatusChanges.length;
-                                const showingCount = Math.min(statusChangesPerPage, count);
                                 const showPagination = count > statusChangesPerPage;
                                 const isSelected = statusChangeFilter.has(status);
                                 
@@ -1173,9 +1166,9 @@ export default function PropertyDashboard() {
                                           : 'bg-blue-600 text-white shadow-sm'
                                         : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-gray-400'
                                     }`}
-                                    title={showPagination ? `Showing ${showingCount} of ${count} on this page` : undefined}
+                                    title={showPagination ? `Showing ${statusChangesPerPage} of ${count} on this page` : undefined}
                                   >
-                                    {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({showPagination ? `${showingCount} of ${count}` : count})
+                                    {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({showPagination ? `${statusChangesPerPage} of ${count}` : count})
                                   </button>
                                 );
                               })}
