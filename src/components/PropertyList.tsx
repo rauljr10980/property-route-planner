@@ -3,6 +3,7 @@ import { CheckCircle, Navigation } from 'lucide-react';
 import { loadSharedProperties } from '../utils/sharedData';
 import { getPropertyStatus as getPropertyStatusUtil } from '../utils/fileProcessor';
 import gcsStorage from '../services/gcsStorage';
+import PropertyDetail from './PropertyDetail';
 
 interface Property {
   [key: string]: any;
@@ -28,6 +29,8 @@ export default function PropertyList() {
     statusChanges: []
   });
   const [deadLeads, setDeadLeads] = useState<any[]>([]);
+  const [selectedProperty, setSelectedProperty] = useState<any | null>(null);
+  
   const getPropertyStatus = (prop: Property): string | null => {
     return getPropertyStatusUtil(prop);
   };
@@ -525,17 +528,15 @@ export default function PropertyList() {
                           </td>
                           <td className="px-3 py-2">
                             {cad ? (
-                              <div className="flex flex-col gap-1">
+                              <button
+                                onClick={() => setSelectedProperty(prop)}
+                                className="flex flex-col gap-1 text-left hover:bg-indigo-50 p-1 rounded transition-colors cursor-pointer"
+                              >
                                 <span className="text-xs font-mono font-semibold text-green-700">{cad}</span>
-                                <a
-                                  href={`https://bexar.acttax.com/act_webdev/bexar/index.jsp`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-indigo-600 hover:text-indigo-800 underline"
-                                >
-                                  View on Bexar County
-                                </a>
-                              </div>
+                                <span className="text-xs text-indigo-600 hover:text-indigo-800 underline">
+                                  View Details
+                                </span>
+                              </button>
                             ) : (
                               <span className="text-xs text-gray-400">Not available</span>
                             )}
@@ -575,6 +576,14 @@ export default function PropertyList() {
           </div>
         )}
       </div>
+
+      {/* Property Detail Modal */}
+      {selectedProperty && (
+        <PropertyDetail
+          property={selectedProperty}
+          onClose={() => setSelectedProperty(null)}
+        />
+      )}
     </div>
   );
 }
