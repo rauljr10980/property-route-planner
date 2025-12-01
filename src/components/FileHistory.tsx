@@ -25,6 +25,15 @@ export default function FileHistory() {
   const [sharedProperties, setSharedProperties] = useState<Property[]>([]);
   const [lastUploadDate, setLastUploadDate] = useState<string | null>(null);
   const [processingProgress, setProcessingProgress] = useState<{ progress: number; message: string } | null>(null);
+  const [cadProgress, setCadProgress] = useState<{
+    stage: string;
+    total: number;
+    processed: number;
+    cadFetched: number;
+    cadFailed: number;
+    cadSkipped: number;
+    currentProperty?: string;
+  } | null>(null);
 
   useEffect(() => {
     const initialize = async () => {
@@ -145,6 +154,28 @@ export default function FileHistory() {
       // Always use server-side processing for all files (faster and more accurate)
       setProcessingProgress({ progress: 5, message: 'Uploading file to server for processing...' });
       
+      // Start polling for CAD progress (will continue after file processing)
+      let progressInterval: NodeJS.Timeout | null = null;
+      const startProgressPolling = () => {
+        progressInterval = setInterval(async () => {
+          try {
+            const status = await gcsStorage.loadProcessingStatus();
+            if (status.stage === 'cad_fetching' || status.stage === 'complete') {
+              setCadProgress(status);
+              if (status.stage === 'complete') {
+                if (progressInterval) clearInterval(progressInterval);
+                progressInterval = null;
+              }
+            }
+          } catch (error) {
+            console.error('Error loading progress:', error);
+          }
+        }, 2000); // Poll every 2 seconds
+      };
+      
+      // Start polling immediately
+      startProgressPolling();
+
       const result = await gcsStorage.processFile(
         file,
         existingProperties,
@@ -153,6 +184,8 @@ export default function FileHistory() {
           setProcessingProgress({ progress, message });
         }
       );
+      
+      // Keep polling for CAD progress (don't clear interval, it will continue)
 
       // Check if processing is happening in background
       if (result.status === 'processing') {

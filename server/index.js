@@ -640,6 +640,38 @@ app.get('/api/load-properties', async (req, res) => {
   }
 });
 
+// Get processing status (for CAD fetching progress)
+app.get('/api/processing-status', async (req, res) => {
+  try {
+    const statusPath = 'data/processing-status.json';
+    const fileRef = bucket.file(statusPath);
+
+    const [exists] = await fileRef.exists();
+    
+    if (!exists) {
+      return res.json({ 
+        stage: 'idle',
+        total: 0,
+        processed: 0,
+        cadFetched: 0,
+        cadFailed: 0,
+        cadSkipped: 0
+      });
+    }
+
+    const [file] = await fileRef.download();
+    const data = JSON.parse(file.toString());
+
+    res.json(data);
+  } catch (error) {
+    console.error('Load processing status error:', error);
+    res.json({ 
+      stage: 'error',
+      error: error.message
+    });
+  }
+});
+
 // Get comparison report
 app.get('/api/comparison-report', async (req, res) => {
   try {
@@ -2037,14 +2069,43 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     // Check if CAD fetching should be enabled (default: true, can be disabled via env var)
     const enableCADFetching = process.env.ENABLE_CAD_FETCHING !== 'false';
     
+    // Store progress in a shared object that can be accessed via API
+    const processingStatus = {
+      stage: 'cad_fetching',
+      total: finalProperties.length,
+      processed: 0,
+      cadFetched: 0,
+      cadSkipped: 0,
+      cadFailed: 0,
+      startTime: Date.now(),
+      currentProperty: null,
+      lastUpdate: Date.now()
+    };
+    
+    // Save processing status to GCS for frontend to poll
+    const statusPath = 'data/processing-status.json';
+    const statusFileRef = bucket.file(statusPath);
+    
+    const updateProcessingStatus = async () => {
+      try {
+        processingStatus.lastUpdate = Date.now();
+        await statusFileRef.save(JSON.stringify(processingStatus, null, 2), {
+          metadata: {
+            contentType: 'application/json'
+          }
+        });
+      } catch (error) {
+        console.warn('⚠️ Failed to update processing status:', error.message);
+      }
+    };
+    
     if (enableCADFetching) {
       console.log(`🔄 Starting automatic CAD fetching for ${finalProperties.length} properties...`);
       const cadFetchStartTime = Date.now();
       let cadFetched = 0;
       let cadSkipped = 0; // Properties that already had CAD
       let cadFailed = 0;
-      const cadBatchSize = 10; // Process 10 at a time to avoid overwhelming the server
-      const cadDelay = 2000; // 2 second delay between batches
+      const cadDelay = 1000; // 1 second delay between requests (process one by one)
       
       // Filter properties with valid CAN (12 digits) that don't already have CAD
       const propertiesNeedingCAD = finalProperties.filter(prop => {
@@ -2061,79 +2122,117 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
         return false;
       });
       
+      processingStatus.total = propertiesNeedingCAD.length;
+      await updateProcessingStatus();
+      
       console.log(`📊 Found ${propertiesNeedingCAD.length} properties needing CAD (${cadSkipped} already have CAD, ${finalProperties.length - propertiesNeedingCAD.length - cadSkipped} invalid CAN)`);
       
-      // Fetch CAD in batches
-      for (let i = 0; i < propertiesNeedingCAD.length; i += cadBatchSize) {
-        const batch = propertiesNeedingCAD.slice(i, i + cadBatchSize);
-        const batchPromises = batch.map(async (prop) => {
-          const can = String(prop.CAN).replace(/[\s-]/g, '').trim();
-          try {
-            // Add small delay between individual requests
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const result = await fetchCADForCAN(can);
-            if (result.success && result.cad) {
-              prop.CAD = result.cad;
-              prop.cadPropertyId = result.cad;
-              prop.cadFetchedDate = new Date().toISOString();
-              prop.cadFetchAttempts = result.attempts || 1;
-              
-              // Store comprehensive property information from Bexar County
-              if (result.propertyInfo) {
-                prop.bexarCountyData = result.propertyInfo;
-                // Also store commonly used fields at top level for easy access
-                if (result.propertyInfo.address) prop.bexarAddress = result.propertyInfo.address;
-                if (result.propertyInfo.legalDescription) prop.legalDescription = result.propertyInfo.legalDescription;
-                if (result.propertyInfo.taxInfo) prop.taxInfo = result.propertyInfo.taxInfo;
-                if (result.propertyInfo.propertyValues) prop.propertyValues = result.propertyInfo.propertyValues;
-                if (result.propertyInfo.paymentHistory && result.propertyInfo.paymentHistory.length > 0) {
-                  prop.paymentHistory = result.propertyInfo.paymentHistory;
-                }
-              }
-              
-              cadFetched++;
-              return { success: true, can, cad: result.cad, attempts: result.attempts };
-            } else {
-              prop.cadFetchError = result.error;
-              prop.cadFetchAttempts = result.attempts || 1;
-              prop.cadFetchedDate = new Date().toISOString();
-              // Still store property info even if CAD wasn't found
-              if (result.propertyInfo) {
-                prop.bexarCountyData = result.propertyInfo;
-              }
-              cadFailed++;
-              return { success: false, can, error: result.error, attempts: result.attempts };
-            }
-          } catch (error) {
-            prop.cadFetchError = error.message;
+      // Process ONE property at a time, save after each one
+      for (let i = 0; i < propertiesNeedingCAD.length; i++) {
+        const prop = propertiesNeedingCAD[i];
+        const can = String(prop.CAN).replace(/[\s-]/g, '').trim();
+        
+        processingStatus.currentProperty = can;
+        processingStatus.processed = i;
+        await updateProcessingStatus();
+        
+        try {
+          // Add delay between requests
+          await new Promise(resolve => setTimeout(resolve, cadDelay));
+          
+          const result = await fetchCADForCAN(can);
+          if (result.success && result.cad) {
+            prop.CAD = result.cad;
+            prop.cadPropertyId = result.cad;
             prop.cadFetchedDate = new Date().toISOString();
+            prop.cadFetchAttempts = result.attempts || 1;
+            
+            // Store comprehensive property information from Bexar County
+            if (result.propertyInfo) {
+              prop.bexarCountyData = result.propertyInfo;
+              // Also store commonly used fields at top level for easy access
+              if (result.propertyInfo.address) prop.bexarAddress = result.propertyInfo.address;
+              if (result.propertyInfo.legalDescription) prop.legalDescription = result.propertyInfo.legalDescription;
+              if (result.propertyInfo.taxInfo) prop.taxInfo = result.propertyInfo.taxInfo;
+              if (result.propertyInfo.propertyValues) prop.propertyValues = result.propertyInfo.propertyValues;
+              if (result.propertyInfo.paymentHistory && result.propertyInfo.paymentHistory.length > 0) {
+                prop.paymentHistory = result.propertyInfo.paymentHistory;
+              }
+            }
+            
+            cadFetched++;
+            processingStatus.cadFetched = cadFetched;
+          } else {
+            prop.cadFetchError = result.error;
+            prop.cadFetchAttempts = result.attempts || 1;
+            prop.cadFetchedDate = new Date().toISOString();
+            // Still store property info even if CAD wasn't found
+            if (result.propertyInfo) {
+              prop.bexarCountyData = result.propertyInfo;
+            }
             cadFailed++;
-            console.warn(`⚠️ Error fetching CAD for CAN ${can}:`, error.message);
-            return { success: false, can, error: error.message };
+            processingStatus.cadFailed = cadFailed;
           }
-        });
+        } catch (error) {
+          prop.cadFetchError = error.message;
+          prop.cadFetchedDate = new Date().toISOString();
+          cadFailed++;
+          processingStatus.cadFailed = cadFailed;
+          console.warn(`⚠️ Error fetching CAD for CAN ${can}:`, error.message);
+        }
         
-        await Promise.all(batchPromises);
+        // Save properties to GCS after each property (incremental save)
+        try {
+          const dataPath = 'data/properties.json';
+          const dataFileRef = bucket.file(dataPath);
+          const propertiesData = {
+            properties: finalProperties,
+            uploadDate: uploadDate,
+            lastUpdated: new Date().toISOString(),
+            processingStatus: {
+              cadFetched: cadFetched,
+              cadFailed: cadFailed,
+              cadSkipped: cadSkipped,
+              totalNeedingCAD: propertiesNeedingCAD.length,
+              currentProgress: i + 1
+            }
+          };
+          
+          await dataFileRef.save(JSON.stringify(propertiesData, null, 2), {
+            metadata: {
+              contentType: 'application/json',
+              metadata: {
+                uploadDate: uploadDate,
+                propertyCount: finalProperties.length.toString()
+              }
+            }
+          });
+        } catch (saveError) {
+          console.warn(`⚠️ Failed to save properties incrementally (property ${i + 1}):`, saveError.message);
+        }
         
-        // Log progress every 100 properties
-        if ((i + cadBatchSize) % 100 === 0 || i + cadBatchSize >= propertiesNeedingCAD.length) {
-          const progress = Math.min(i + cadBatchSize, propertiesNeedingCAD.length);
+        // Log progress every 10 properties
+        if ((i + 1) % 10 === 0 || i + 1 === propertiesNeedingCAD.length) {
+          const progress = i + 1;
           const elapsed = ((Date.now() - cadFetchStartTime) / 1000).toFixed(1);
           const rate = progress > 0 ? (elapsed / progress).toFixed(2) : 0;
-          console.log(`📊 CAD fetching progress: ${progress}/${propertiesNeedingCAD.length} (${cadFetched} successful, ${cadFailed} failed, ${cadSkipped} skipped) - ${elapsed}s elapsed (~${rate}s per property)`);
-        }
-        
-        // Delay between batches to be respectful to the Bexar County website
-        if (i + cadBatchSize < propertiesNeedingCAD.length) {
-          await new Promise(resolve => setTimeout(resolve, cadDelay));
+          const remaining = propertiesNeedingCAD.length - progress;
+          const estimatedTimeRemaining = remaining > 0 ? ((parseFloat(rate) * remaining) / 60).toFixed(1) : 0;
+          console.log(`📊 CAD fetching progress: ${progress}/${propertiesNeedingCAD.length} (${cadFetched} successful, ${cadFailed} failed, ${cadSkipped} skipped) - ${elapsed}s elapsed (~${rate}s per property, ~${estimatedTimeRemaining} min remaining)`);
         }
       }
+      
+      processingStatus.stage = 'complete';
+      processingStatus.processed = propertiesNeedingCAD.length;
+      await updateProcessingStatus();
       
       const cadFetchTime = ((Date.now() - cadFetchStartTime) / 1000).toFixed(1);
       const successRate = propertiesNeedingCAD.length > 0 ? ((cadFetched / propertiesNeedingCAD.length) * 100).toFixed(1) : 0;
       console.log(`✅ CAD fetching complete: ${cadFetched} successful, ${cadFailed} failed, ${cadSkipped} skipped in ${cadFetchTime}s (${successRate}% success rate)`);
     } else {
       console.log(`⏭️ CAD fetching disabled (ENABLE_CAD_FETCHING=false)`);
+      processingStatus.stage = 'complete';
+      await updateProcessingStatus();
     }
     
     console.log(`✅ Processing complete: ${finalProperties.length} properties from new file, ${newStatusChanges.length} status changes`);

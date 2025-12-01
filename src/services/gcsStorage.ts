@@ -255,6 +255,41 @@ class GCSStorageService {
   }
 
   /**
+   * Load processing status (for CAD fetching progress)
+   */
+  async loadProcessingStatus(): Promise<{
+    stage: string;
+    total: number;
+    processed: number;
+    cadFetched: number;
+    cadFailed: number;
+    cadSkipped: number;
+    currentProperty?: string;
+    startTime?: number;
+    lastUpdate?: number;
+  }> {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/processing-status`);
+
+      if (!response.ok) {
+        throw new Error('Failed to load processing status');
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Load processing status error:', error);
+      return {
+        stage: 'idle',
+        total: 0,
+        processed: 0,
+        cadFetched: 0,
+        cadFailed: 0,
+        cadSkipped: 0
+      };
+    }
+  }
+
+  /**
    * Load comparison report from GCS
    */
   async loadComparisonReport(): Promise<{ report: any; uploadDate: string | null } | null> {
