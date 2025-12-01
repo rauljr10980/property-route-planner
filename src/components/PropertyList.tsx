@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, Navigation } from 'lucide-react';
+import { CheckCircle, Navigation, RefreshCw, Search } from 'lucide-react';
 import { loadSharedProperties } from '../utils/sharedData';
 import { getPropertyStatus as getPropertyStatusUtil } from '../utils/fileProcessor';
 import gcsStorage from '../services/gcsStorage';
@@ -28,9 +28,54 @@ export default function PropertyList() {
     statusChanges: []
   });
   const [deadLeads, setDeadLeads] = useState<any[]>([]);
+  const [fetchingCAD, setFetchingCAD] = useState<Set<string>>(new Set());
+  const [cadData, setCadData] = useState<Map<string, { cad: string | null; propertyInfo?: any }>>(new Map());
 
   const getPropertyStatus = (prop: Property): string | null => {
     return getPropertyStatusUtil(prop);
+  };
+
+  const fetchCADForProperty = async (can: string, prop: any) => {
+    if (!can || fetchingCAD.has(can)) return;
+    
+    setFetchingCAD(prev => new Set(prev).add(can));
+    
+    try {
+      const result = await gcsStorage.fetchCAD(can);
+      setCadData(prev => {
+        const newMap = new Map(prev);
+        newMap.set(can, {
+          cad: result.cad,
+          propertyInfo: result.propertyInfo
+        });
+        return newMap;
+      });
+      
+      // Update the property in the list with CAD data
+      if (result.success && result.cad) {
+        prop.CAD = result.cad;
+        prop.cadPropertyId = result.cad;
+        if (result.propertyInfo) {
+          prop.cadPropertyInfo = result.propertyInfo;
+        }
+      }
+    } catch (error: any) {
+      console.error(`Error fetching CAD for CAN ${can}:`, error);
+      setCadData(prev => {
+        const newMap = new Map(prev);
+        newMap.set(can, {
+          cad: null,
+          propertyInfo: { error: error.message }
+        });
+        return newMap;
+      });
+    } finally {
+      setFetchingCAD(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(can);
+        return newSet;
+      });
+    }
   };
 
   useEffect(() => {
@@ -448,7 +493,8 @@ export default function PropertyList() {
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>Previous Status</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '12%' }}>New Status</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '40%' }}>Additional Details</th>
-                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '10%' }}>Days</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '8%' }}>CAD</th>
+                    <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '8%' }}>Days</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700" style={{ width: '11%' }}>Action</th>
                   </tr>
                 </thead>
@@ -486,6 +532,9 @@ export default function PropertyList() {
                       const tot_percan = prop.TOT_PERCAN || prop['TOT_PERCAN'] || '';
                       const addrstring = prop.ADDRSTRING || prop['ADDRSTRING'] || prop.address || prop.Address || '';
                       const zipCode = prop.ZIP_CODE || prop['ZIP_CODE'] || prop.zipCode || '';
+                      const cad = prop.CAD || prop.cadPropertyId || cadData.get(propertyId)?.cad || null;
+                      const isFetchingCAD = fetchingCAD.has(propertyId);
+                      const cadInfo = cadData.get(propertyId);
                       
                       return (
                         <tr key={idx} className="hover:bg-gray-50">
@@ -517,6 +566,44 @@ export default function PropertyList() {
                               {addrstring && <div><strong>Address (H):</strong> {addrstring}</div>}
                               {zipCode && <div><strong>ZIP (I):</strong> {zipCode}</div>}
                             </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            {cad ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="text-xs font-mono font-semibold text-green-700">{cad}</span>
+                                {cadInfo?.propertyInfo && (
+                                  <button
+                                    onClick={() => window.open(`https://bexar.acttax.com/act_webdev/bexar/index.jsp`, '_blank')}
+                                    className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                                  >
+                                    <Search className="w-3 h-3" />
+                                    View
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => fetchCADForProperty(propertyId, prop)}
+                                disabled={isFetchingCAD}
+                                className={`text-xs px-2 py-1 rounded flex items-center gap-1 ${
+                                  isFetchingCAD
+                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                    : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                                }`}
+                              >
+                                {isFetchingCAD ? (
+                                  <>
+                                    <RefreshCw className="w-3 h-3 animate-spin" />
+                                    Fetching...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Search className="w-3 h-3" />
+                                    Fetch CAD
+                                  </>
+                                )}
+                              </button>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-xs text-gray-500">
                             {change.daysSinceChange > 0 ? `${change.daysSinceChange} days` : 'Today'}

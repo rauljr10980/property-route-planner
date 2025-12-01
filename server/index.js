@@ -10,6 +10,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
 import * as XLSX from 'xlsx';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -668,6 +670,267 @@ app.get('/api/comparison-report', async (req, res) => {
       report: null,
       message: 'Failed to load comparison report',
       error: error.message 
+    });
+  }
+});
+
+// Fetch CAD (County Appraisal District) information from Bexar County website
+app.post('/api/fetch-cad', async (req, res) => {
+  try {
+    const { can } = req.body;
+    
+    if (!can) {
+      return res.status(400).json({ error: 'CAN (Account Number) is required' });
+    }
+
+    // Clean CAN - remove spaces, dashes, ensure it's 12 digits
+    const cleanCAN = String(can).replace(/[\s-]/g, '').trim();
+    
+    if (cleanCAN.length !== 12) {
+      return res.status(400).json({ error: 'CAN must be a 12-digit account number' });
+    }
+
+    console.log(`🔍 Fetching CAD data for CAN: ${cleanCAN}`);
+
+    try {
+      // Search the Bexar County website by Account Number
+      const searchUrl = 'https://bexar.acttax.com/act_webdev/bexar/index.jsp';
+      
+      // First, get the search page to get any required tokens/cookies
+      const pageResponse = await axios.get(searchUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
+        },
+        timeout: 15000
+      });
+
+      // Parse the HTML to find the search form
+      const $ = cheerio.load(pageResponse.data);
+      
+      // Find the search form - look for form with search functionality
+      const form = $('form').first();
+      const formAction = form.attr('action') || form.attr('onsubmit') || '';
+      
+      // Try different search endpoints based on common patterns
+      let searchActionUrl = 'https://bexar.acttax.com/act_webdev/bexar/search.jsp';
+      if (formAction && formAction.startsWith('http')) {
+        searchActionUrl = formAction;
+      } else if (formAction && !formAction.startsWith('http')) {
+        searchActionUrl = `https://bexar.acttax.com${formAction}`;
+      }
+
+      // Extract any hidden form fields
+      const hiddenFields = {};
+      form.find('input[type="hidden"]').each((i, elem) => {
+        const name = $(elem).attr('name');
+        const value = $(elem).attr('value') || '';
+        if (name) hiddenFields[name] = value;
+      });
+
+      // Submit search by Account Number/GEO ID (12 digits)
+      const searchParams = new URLSearchParams({
+        'searchType': 'account',
+        'accountNumber': cleanCAN,
+        ...hiddenFields
+      });
+
+      const searchResponse = await axios.post(searchActionUrl, 
+        searchParams.toString(),
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Referer': searchUrl,
+            'Origin': 'https://bexar.acttax.com',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+          },
+          maxRedirects: 5,
+          timeout: 20000,
+          validateStatus: (status) => status < 500 // Accept redirects and client errors
+        }
+      );
+
+      // Parse the results page
+      const $results = cheerio.load(searchResponse.data);
+      
+      // Extract CAD Property ID (PID) - look for 6-digit number
+      let cadPID = null;
+      let propertyInfo = {};
+
+      // Try to find CAD Property ID in various formats
+      $results('*').each((i, elem) => {
+        const text = $results(elem).text();
+        // Look for "CAD Property ID" or "PID" followed by 6 digits
+        const cadMatch = text.match(/(?:CAD|PID|Property ID)[\s:]*(\d{6})/i);
+        if (cadMatch && !cadPID) {
+          cadPID = cadMatch[1];
+        }
+        // Also look for standalone 6-digit numbers that might be CAD
+        const standalone6Digit = text.match(/\b(\d{6})\b/);
+        if (standalone6Digit && !cadPID) {
+          // Check if it's in a context that suggests it's a CAD ID
+          const context = text.toLowerCase();
+          if (context.includes('cad') || context.includes('property id') || context.includes('appraisal')) {
+            cadPID = standalone6Digit[1];
+          }
+        }
+      });
+
+      // Extract additional property information
+      const accountNumber = $results('*:contains("Account Number")').first().text().match(/\d{12}/)?.[0] || cleanCAN;
+      const ownerName = $results('*:contains("Owner")').first().text().replace(/Owner/i, '').trim() || null;
+      const propertyAddress = $results('*:contains("Address")').first().text().replace(/Address/i, '').trim() || null;
+      const propertyValue = $results('*:contains("Value")').first().text().match(/[\d,]+/)?.[0] || null;
+      const taxAmount = $results('*:contains("Tax")').first().text().match(/[\d,]+\.\d{2}/)?.[0] || null;
+
+      if (!cadPID) {
+        // If we couldn't find CAD in the results, try alternative search methods
+        console.log(`⚠️ CAD not found in initial search for CAN: ${cleanCAN}, trying alternative methods...`);
+        
+        // Try searching by CAD Property ID field directly if available
+        // This would require knowing the CAD first, so we'll return what we have
+        return res.json({
+          success: false,
+          can: cleanCAN,
+          cad: null,
+          message: 'CAD Property ID not found in search results. The property may not exist in the Bexar County database.',
+          propertyInfo: {
+            accountNumber,
+            ownerName,
+            propertyAddress,
+            propertyValue,
+            taxAmount
+          }
+        });
+      }
+
+      console.log(`✅ Found CAD Property ID: ${cadPID} for CAN: ${cleanCAN}`);
+
+      res.json({
+        success: true,
+        can: cleanCAN,
+        cad: cadPID,
+        propertyInfo: {
+          accountNumber,
+          ownerName,
+          propertyAddress,
+          propertyValue,
+          taxAmount,
+          cadPropertyId: cadPID
+        }
+      });
+
+    } catch (fetchError) {
+      console.error(`❌ Error fetching CAD for CAN ${cleanCAN}:`, fetchError.message);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to fetch CAD data from Bexar County website',
+        message: fetchError.message,
+        can: cleanCAN
+      });
+    }
+
+  } catch (error) {
+    console.error('Fetch CAD error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
+  }
+});
+
+// Batch fetch CAD for multiple properties
+app.post('/api/fetch-cad-batch', async (req, res) => {
+  try {
+    const { properties } = req.body;
+    
+    if (!Array.isArray(properties) || properties.length === 0) {
+      return res.status(400).json({ error: 'Properties array is required' });
+    }
+
+    if (properties.length > 100) {
+      return res.status(400).json({ error: 'Maximum 100 properties per batch' });
+    }
+
+    console.log(`🔄 Batch fetching CAD for ${properties.length} properties`);
+
+    const results = [];
+    const errors = [];
+
+    // Process in smaller batches to avoid overwhelming the server
+    const batchSize = 5;
+    for (let i = 0; i < properties.length; i += batchSize) {
+      const batch = properties.slice(i, i + batchSize);
+      
+      const batchPromises = batch.map(async (prop) => {
+        const can = prop.CAN || prop.can || prop.accountNumber || prop['Account Number'];
+        if (!can) {
+          return { property: prop, success: false, error: 'No CAN found' };
+        }
+
+        try {
+          // Add delay between requests to be respectful
+          await new Promise(resolve => setTimeout(resolve, 1000 * (i / batchSize)));
+          
+          const cadResponse = await axios.post(`${req.protocol}://${req.get('host')}/api/fetch-cad`, {
+            can: can
+          }, {
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            timeout: 20000
+          });
+
+          return {
+            property: prop,
+            ...cadResponse.data
+          };
+        } catch (error) {
+          return {
+            property: prop,
+            success: false,
+            error: error.message
+          };
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+
+      // Small delay between batches
+      if (i + batchSize < properties.length) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    const successful = results.filter(r => r.success);
+    const failed = results.filter(r => !r.success);
+
+    console.log(`✅ Batch CAD fetch complete: ${successful.length} successful, ${failed.length} failed`);
+
+    res.json({
+      success: true,
+      total: properties.length,
+      successful: successful.length,
+      failed: failed.length,
+      results: results
+    });
+
+  } catch (error) {
+    console.error('Batch fetch CAD error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
     });
   }
 });

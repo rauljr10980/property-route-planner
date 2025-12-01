@@ -281,6 +281,68 @@ class GCSStorageService {
   }
 
   /**
+   * Fetch CAD (County Appraisal District) information from Bexar County website
+   */
+  async fetchCAD(can: string): Promise<{
+    success: boolean;
+    can: string;
+    cad: string | null;
+    propertyInfo?: any;
+    message?: string;
+  }> {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/fetch-cad`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ can })
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to fetch CAD' }));
+        throw new Error(error.error || error.message || 'Failed to fetch CAD');
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Fetch CAD error:', error);
+      throw new Error(error.message || 'Failed to fetch CAD');
+    }
+  }
+
+  /**
+   * Batch fetch CAD for multiple properties
+   */
+  async fetchCADBatch(properties: any[]): Promise<{
+    success: boolean;
+    total: number;
+    successful: number;
+    failed: number;
+    results: any[];
+  }> {
+    try {
+      const response = await fetch(`${this.apiUrl}/api/fetch-cad-batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ properties })
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to fetch CAD batch' }));
+        throw new Error(error.error || error.message || 'Failed to fetch CAD batch');
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error('Fetch CAD batch error:', error);
+      throw new Error(error.message || 'Failed to fetch CAD batch');
+    }
+  }
+
+  /**
    * Reprocess an existing file from GCS (without downloading)
    * Note: existingProperties is no longer sent - backend loads from GCS to avoid 413 errors
    */
