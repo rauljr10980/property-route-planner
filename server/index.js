@@ -674,6 +674,138 @@ app.get('/api/comparison-report', async (req, res) => {
   }
 });
 
+// Helper function to fetch CAD for a single property (used internally)
+async function fetchCADForCAN(can) {
+  try {
+    const cleanCAN = String(can).replace(/[\s-]/g, '').trim();
+    
+    if (cleanCAN.length !== 12) {
+      return { success: false, cad: null, error: 'Invalid CAN length' };
+    }
+
+    // Search the Bexar County website by Account Number
+    const searchUrl = 'https://bexar.acttax.com/act_webdev/bexar/index.jsp';
+    
+    // First, get the search page to get any required tokens/cookies
+    const pageResponse = await axios.get(searchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      },
+      timeout: 15000
+    });
+
+    // Parse the HTML to find the search form
+    const $ = cheerio.load(pageResponse.data);
+    
+    // Find the search form - look for form with search functionality
+    const form = $('form').first();
+    const formAction = form.attr('action') || form.attr('onsubmit') || '';
+    
+    // Try different search endpoints based on common patterns
+    let searchActionUrl = 'https://bexar.acttax.com/act_webdev/bexar/search.jsp';
+    if (formAction && formAction.startsWith('http')) {
+      searchActionUrl = formAction;
+    } else if (formAction && !formAction.startsWith('http')) {
+      searchActionUrl = `https://bexar.acttax.com${formAction}`;
+    }
+
+    // Extract any hidden form fields
+    const hiddenFields = {};
+    form.find('input[type="hidden"]').each((i, elem) => {
+      const name = $(elem).attr('name');
+      const value = $(elem).attr('value') || '';
+      if (name) hiddenFields[name] = value;
+    });
+
+    // Submit search by Account Number/GEO ID (12 digits)
+    const searchParams = new URLSearchParams({
+      'searchType': 'account',
+      'accountNumber': cleanCAN,
+      ...hiddenFields
+    });
+
+    const searchResponse = await axios.post(searchActionUrl, 
+      searchParams.toString(),
+      {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Referer': searchUrl,
+          'Origin': 'https://bexar.acttax.com',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1'
+        },
+        maxRedirects: 5,
+        timeout: 20000,
+        validateStatus: (status) => status < 500 // Accept redirects and client errors
+      }
+    );
+
+    // Parse the results page
+    const $results = cheerio.load(searchResponse.data);
+    
+    // Extract CAD Property ID (PID) - look for 6-digit number
+    let cadPID = null;
+
+    // Method 1: Look for explicit CAD Property ID labels
+    $results('*').each((i, elem) => {
+      const text = $results(elem).text();
+      // Look for "CAD Property ID", "PID", "Property ID" followed by 6 digits
+      const cadMatch = text.match(/(?:CAD\s*Property\s*ID|PID|Property\s*ID|CAD\s*ID)[\s:]*(\d{6})/i);
+      if (cadMatch && !cadPID) {
+        cadPID = cadMatch[1];
+      }
+    });
+
+    // Method 2: Look in table cells or specific HTML structures
+    if (!cadPID) {
+      $results('td, th, div, span').each((i, elem) => {
+        const text = $results(elem).text();
+        const label = text.toLowerCase();
+        if ((label.includes('cad') || label.includes('property id') || label.includes('appraisal')) && !cadPID) {
+          const nextSibling = $results(elem).next();
+          const nextText = nextSibling.text();
+          const cadMatch = nextText.match(/\b(\d{6})\b/);
+          if (cadMatch) {
+            cadPID = cadMatch[1];
+          }
+        }
+      });
+    }
+
+    // Method 3: Look for 6-digit numbers near property-related text
+    if (!cadPID) {
+      const bodyText = $results('body').text();
+      const lines = bodyText.split('\n');
+      for (const line of lines) {
+        const lowerLine = line.toLowerCase();
+        if (lowerLine.includes('cad') || lowerLine.includes('property id') || lowerLine.includes('appraisal')) {
+          const cadMatch = line.match(/\b(\d{6})\b/);
+          if (cadMatch) {
+            cadPID = cadMatch[1];
+            break;
+          }
+        }
+      }
+    }
+
+    if (cadPID) {
+      return { success: true, cad: cadPID };
+    } else {
+      return { success: false, cad: null, error: 'CAD not found in search results' };
+    }
+  } catch (error) {
+    return { success: false, cad: null, error: error.message };
+  }
+}
+
 // Fetch CAD (County Appraisal District) information from Bexar County website
 app.post('/api/fetch-cad', async (req, res) => {
   try {
@@ -693,141 +825,26 @@ app.post('/api/fetch-cad', async (req, res) => {
     console.log(`🔍 Fetching CAD data for CAN: ${cleanCAN}`);
 
     try {
-      // Search the Bexar County website by Account Number
-      const searchUrl = 'https://bexar.acttax.com/act_webdev/bexar/index.jsp';
+      const result = await fetchCADForCAN(cleanCAN);
       
-      // First, get the search page to get any required tokens/cookies
-      const pageResponse = await axios.get(searchUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'Connection': 'keep-alive',
-          'Upgrade-Insecure-Requests': '1'
-        },
-        timeout: 15000
-      });
-
-      // Parse the HTML to find the search form
-      const $ = cheerio.load(pageResponse.data);
-      
-      // Find the search form - look for form with search functionality
-      const form = $('form').first();
-      const formAction = form.attr('action') || form.attr('onsubmit') || '';
-      
-      // Try different search endpoints based on common patterns
-      let searchActionUrl = 'https://bexar.acttax.com/act_webdev/bexar/search.jsp';
-      if (formAction && formAction.startsWith('http')) {
-        searchActionUrl = formAction;
-      } else if (formAction && !formAction.startsWith('http')) {
-        searchActionUrl = `https://bexar.acttax.com${formAction}`;
-      }
-
-      // Extract any hidden form fields
-      const hiddenFields = {};
-      form.find('input[type="hidden"]').each((i, elem) => {
-        const name = $(elem).attr('name');
-        const value = $(elem).attr('value') || '';
-        if (name) hiddenFields[name] = value;
-      });
-
-      // Submit search by Account Number/GEO ID (12 digits)
-      const searchParams = new URLSearchParams({
-        'searchType': 'account',
-        'accountNumber': cleanCAN,
-        ...hiddenFields
-      });
-
-      const searchResponse = await axios.post(searchActionUrl, 
-        searchParams.toString(),
-        {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Referer': searchUrl,
-            'Origin': 'https://bexar.acttax.com',
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-          },
-          maxRedirects: 5,
-          timeout: 20000,
-          validateStatus: (status) => status < 500 // Accept redirects and client errors
-        }
-      );
-
-      // Parse the results page
-      const $results = cheerio.load(searchResponse.data);
-      
-      // Extract CAD Property ID (PID) - look for 6-digit number
-      let cadPID = null;
-      let propertyInfo = {};
-
-      // Try to find CAD Property ID in various formats
-      $results('*').each((i, elem) => {
-        const text = $results(elem).text();
-        // Look for "CAD Property ID" or "PID" followed by 6 digits
-        const cadMatch = text.match(/(?:CAD|PID|Property ID)[\s:]*(\d{6})/i);
-        if (cadMatch && !cadPID) {
-          cadPID = cadMatch[1];
-        }
-        // Also look for standalone 6-digit numbers that might be CAD
-        const standalone6Digit = text.match(/\b(\d{6})\b/);
-        if (standalone6Digit && !cadPID) {
-          // Check if it's in a context that suggests it's a CAD ID
-          const context = text.toLowerCase();
-          if (context.includes('cad') || context.includes('property id') || context.includes('appraisal')) {
-            cadPID = standalone6Digit[1];
+      if (result.success) {
+        console.log(`✅ Found CAD Property ID: ${result.cad} for CAN: ${cleanCAN}`);
+        res.json({
+          success: true,
+          can: cleanCAN,
+          cad: result.cad,
+          propertyInfo: {
+            cadPropertyId: result.cad
           }
-        }
-      });
-
-      // Extract additional property information
-      const accountNumber = $results('*:contains("Account Number")').first().text().match(/\d{12}/)?.[0] || cleanCAN;
-      const ownerName = $results('*:contains("Owner")').first().text().replace(/Owner/i, '').trim() || null;
-      const propertyAddress = $results('*:contains("Address")').first().text().replace(/Address/i, '').trim() || null;
-      const propertyValue = $results('*:contains("Value")').first().text().match(/[\d,]+/)?.[0] || null;
-      const taxAmount = $results('*:contains("Tax")').first().text().match(/[\d,]+\.\d{2}/)?.[0] || null;
-
-      if (!cadPID) {
-        // If we couldn't find CAD in the results, try alternative search methods
-        console.log(`⚠️ CAD not found in initial search for CAN: ${cleanCAN}, trying alternative methods...`);
-        
-        // Try searching by CAD Property ID field directly if available
-        // This would require knowing the CAD first, so we'll return what we have
-        return res.json({
+        });
+      } else {
+        res.json({
           success: false,
           can: cleanCAN,
           cad: null,
-          message: 'CAD Property ID not found in search results. The property may not exist in the Bexar County database.',
-          propertyInfo: {
-            accountNumber,
-            ownerName,
-            propertyAddress,
-            propertyValue,
-            taxAmount
-          }
+          message: result.error || 'CAD Property ID not found in search results. The property may not exist in the Bexar County database.'
         });
       }
-
-      console.log(`✅ Found CAD Property ID: ${cadPID} for CAN: ${cleanCAN}`);
-
-      res.json({
-        success: true,
-        can: cleanCAN,
-        cad: cadPID,
-        propertyInfo: {
-          accountNumber,
-          ownerName,
-          propertyAddress,
-          propertyValue,
-          taxAmount,
-          cadPropertyId: cadPID
-        }
-      });
-
     } catch (fetchError) {
       console.error(`❌ Error fetching CAD for CAN ${cleanCAN}:`, fetchError.message);
       res.status(500).json({
@@ -1752,7 +1769,66 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
     // IMPORTANT: Replace all properties with new file data, don't merge with old cached data
     // The processedProperties array contains ALL properties from the new file
     // This ensures the new file completely replaces old data, not merges with it
-    const finalProperties = processedProperties; // Use only new file's properties
+    let finalProperties = processedProperties; // Use only new file's properties
+    
+    // Automatically fetch CAD for all properties with valid CAN values
+    console.log(`🔄 Starting automatic CAD fetching for ${finalProperties.length} properties...`);
+    const cadFetchStartTime = Date.now();
+    let cadFetched = 0;
+    let cadFailed = 0;
+    const cadBatchSize = 10; // Process 10 at a time to avoid overwhelming the server
+    const cadDelay = 2000; // 2 second delay between batches
+    
+    // Filter properties with valid CAN (12 digits)
+    const propertiesWithCAN = finalProperties.filter(prop => {
+      const can = prop.CAN ? String(prop.CAN).replace(/[\s-]/g, '').trim() : '';
+      return can.length === 12;
+    });
+    
+    console.log(`📊 Found ${propertiesWithCAN.length} properties with valid CAN values for CAD fetching`);
+    
+    // Fetch CAD in batches
+    for (let i = 0; i < propertiesWithCAN.length; i += cadBatchSize) {
+      const batch = propertiesWithCAN.slice(i, i + cadBatchSize);
+      const batchPromises = batch.map(async (prop) => {
+        const can = String(prop.CAN).replace(/[\s-]/g, '').trim();
+        try {
+          // Add small delay between individual requests
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const result = await fetchCADForCAN(can);
+          if (result.success && result.cad) {
+            prop.CAD = result.cad;
+            prop.cadPropertyId = result.cad;
+            cadFetched++;
+            return { success: true, can, cad: result.cad };
+          } else {
+            cadFailed++;
+            return { success: false, can, error: result.error };
+          }
+        } catch (error) {
+          cadFailed++;
+          console.warn(`⚠️ Error fetching CAD for CAN ${can}:`, error.message);
+          return { success: false, can, error: error.message };
+        }
+      });
+      
+      await Promise.all(batchPromises);
+      
+      // Log progress every 100 properties
+      if ((i + cadBatchSize) % 100 === 0 || i + cadBatchSize >= propertiesWithCAN.length) {
+        const progress = Math.min(i + cadBatchSize, propertiesWithCAN.length);
+        const elapsed = ((Date.now() - cadFetchStartTime) / 1000).toFixed(1);
+        console.log(`📊 CAD fetching progress: ${progress}/${propertiesWithCAN.length} (${cadFetched} successful, ${cadFailed} failed) - ${elapsed}s elapsed`);
+      }
+      
+      // Delay between batches to be respectful to the Bexar County website
+      if (i + cadBatchSize < propertiesWithCAN.length) {
+        await new Promise(resolve => setTimeout(resolve, cadDelay));
+      }
+    }
+    
+    const cadFetchTime = ((Date.now() - cadFetchStartTime) / 1000).toFixed(1);
+    console.log(`✅ CAD fetching complete: ${cadFetched} successful, ${cadFailed} failed in ${cadFetchTime}s`);
     
     console.log(`✅ Processing complete: ${finalProperties.length} properties from new file, ${newStatusChanges.length} status changes`);
     console.log(`📊 Data processing summary:`);
