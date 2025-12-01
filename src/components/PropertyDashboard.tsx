@@ -1355,26 +1355,26 @@ export default function PropertyDashboard() {
                               >
                                 Previous
                               </button>
-                              <div className="flex gap-1">
-                                {Array.from({ length: Math.min(5, paginated.totalPages) }, (_, i) => {
+                              <div className="flex gap-1 flex-wrap">
+                                {Array.from({ length: Math.min(10, paginated.totalPages) }, (_, i) => {
                                   let pageNum;
-                                  if (paginated.totalPages <= 5) {
+                                  if (paginated.totalPages <= 10) {
                                     pageNum = i + 1;
-                                  } else if (paginated.currentPage <= 3) {
+                                  } else if (paginated.currentPage <= 5) {
                                     pageNum = i + 1;
-                                  } else if (paginated.currentPage >= paginated.totalPages - 2) {
-                                    pageNum = paginated.totalPages - 4 + i;
+                                  } else if (paginated.currentPage >= paginated.totalPages - 4) {
+                                    pageNum = paginated.totalPages - 9 + i;
                                   } else {
-                                    pageNum = paginated.currentPage - 2 + i;
+                                    pageNum = paginated.currentPage - 4 + i;
                                   }
                                   return (
                                     <button
                                       key={pageNum}
                                       onClick={() => setStatusChangesPage(pageNum)}
-                                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                                      className={`px-4 py-2 rounded-md text-sm font-semibold transition min-w-[44px] ${
                                         paginated.currentPage === pageNum
-                                          ? 'bg-indigo-600 text-white'
-                                          : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                                          ? 'bg-indigo-600 text-white shadow-md'
+                                          : 'bg-white border-2 border-indigo-300 text-gray-700 hover:bg-indigo-50 hover:border-indigo-400'
                                       }`}
                                     >
                                       {pageNum}
