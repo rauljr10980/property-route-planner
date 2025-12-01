@@ -81,14 +81,47 @@ export default function PropertyList() {
 
   const fetchCADForAllVisible = async () => {
     const paginated = getPaginatedStatusChanges();
-    const propertiesToFetch = paginated.items.map(change => {
-      const prop = change.property;
-      const can = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber;
-      return { can, prop };
-    }).filter(({ can }) => can && String(can).replace(/[\s-]/g, '').trim().length === 12);
+    
+    // Extract CAN values from properties - try multiple field names
+    const propertiesToFetch = paginated.items
+      .map(change => {
+        const prop = change.property || change;
+        // Try multiple ways to get CAN - same logic as used in table rendering
+        let can = prop.CAN || prop.can || prop['CAN'] || 
+                  prop.propertyId || prop['Property ID'] || 
+                  prop['Account Number'] || prop.accountNumber ||
+                  prop.id || prop.identifier;
+        
+        // Convert to string and clean
+        if (can) {
+          can = String(can).replace(/[\s-]/g, '').trim();
+          // Pad with leading zeros if it's a number and less than 12 digits
+          if (/^\d+$/.test(can) && can.length < 12) {
+            can = can.padStart(12, '0');
+          }
+        }
+        
+        return { can, prop, originalCan: prop.CAN || prop.can || prop['CAN'] };
+      })
+      .filter(({ can }) => {
+        // Check if CAN is valid (12 digits)
+        if (!can) return false;
+        const cleaned = String(can).replace(/[\s-]/g, '').trim();
+        return /^\d{12}$/.test(cleaned);
+      });
+
+    console.log('Properties to fetch CAD for:', propertiesToFetch.length);
+    console.log('Sample CANs:', propertiesToFetch.slice(0, 3).map(p => ({ can: p.can, original: p.originalCan })));
 
     if (propertiesToFetch.length === 0) {
-      alert('No properties with valid CAN values found in current view');
+      // Debug: log what we found
+      console.log('No valid CANs found. Sample properties:', paginated.items.slice(0, 3).map(c => ({
+        property: c.property,
+        hasCAN: !!c.property?.CAN,
+        canValue: c.property?.CAN,
+        allKeys: Object.keys(c.property || {})
+      })));
+      alert(`No properties with valid CAN values found in current view.\n\nFound ${paginated.items.length} properties, but none have valid 12-digit CAN values.\n\nCheck console for details.`);
       return;
     }
 
