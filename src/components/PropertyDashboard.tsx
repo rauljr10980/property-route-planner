@@ -381,23 +381,25 @@ export default function PropertyDashboard() {
     return allChanges;
   };
 
-  // Pagination for status changes table
+  // Pagination for status changes table - works per filter/list
   const getPaginatedStatusChanges = () => {
-    const allChanges = getFilteredStatusChanges();
+    // Get the filtered list first (this applies all active filters)
+    const filteredList = getFilteredStatusChanges();
+    
+    // Apply pagination to the filtered list (250 items per page for THIS specific filter)
     const startIndex = (statusChangesPage - 1) * statusChangesPerPage;
     const endIndex = startIndex + statusChangesPerPage;
-    // Force slice to ensure we never return more than statusChangesPerPage items
-    const paginatedItems = allChanges.slice(startIndex, endIndex).slice(0, statusChangesPerPage);
+    const paginatedItems = filteredList.slice(startIndex, endIndex);
     
     return {
-      items: paginatedItems,
-      total: allChanges.length,
-      totalPages: Math.ceil(allChanges.length / statusChangesPerPage),
+      items: paginatedItems, // Max 250 items from the current filtered list
+      total: filteredList.length, // Total items in the current filtered list
+      totalPages: Math.ceil(filteredList.length / statusChangesPerPage),
       currentPage: statusChangesPage
     };
   };
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters change (so each filter starts at page 1)
   useEffect(() => {
     setStatusChangesPage(1);
   }, [transitionFilter, selectedBreakdownTransition, statusChangeFilter]);
@@ -1306,16 +1308,9 @@ export default function PropertyDashboard() {
                               );
                             }
                             
-                            // Use paginated items directly (already sliced to 250 max)
-                            // Force limit to 250 items maximum as a safety check - CRITICAL LIMIT
-                            const itemsToRender = paginated.items.slice(0, statusChangesPerPage);
-                            
-                            // Debug: Log to verify pagination is working
-                            console.log(`📊 Rendering page ${statusChangesPage}: ${itemsToRender.length} items (max ${statusChangesPerPage}) out of ${paginated.total} total`);
-                            
-                            if (itemsToRender.length > statusChangesPerPage) {
-                              console.error(`❌ CRITICAL: Pagination error: Found ${itemsToRender.length} items, expected max ${statusChangesPerPage}`);
-                            }
+                            // Use paginated items - already limited to 250 per page for THIS filter
+                            // Each filter (Judgment, Active, Pending, transitions) has its own pagination
+                            const itemsToRender = paginated.items;
                             
                             if (itemsToRender.length === 0) {
                               return (
@@ -1327,9 +1322,8 @@ export default function PropertyDashboard() {
                               );
                             }
                             
-                            // Render only the paginated items (max 250) - HARD LIMIT
-                            // Use slice again as final safety check before rendering
-                            return itemsToRender.slice(0, statusChangesPerPage).map((change, idx) => {
+                            // Render only the paginated items (max 250 per page for current filter)
+                            return itemsToRender.map((change, idx) => {
                             const prop = change.property;
                             const propertyId = prop.CAN || prop.propertyId || prop['Property ID'] || prop['Account Number'] || prop.accountNumber || 'N/A';
                             const pnumber = prop.Pnumber || prop['Pnumber'] || '';
