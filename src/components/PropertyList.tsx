@@ -82,12 +82,16 @@ export default function PropertyList() {
   const fetchCADForAllVisible = async () => {
     const paginated = getPaginatedStatusChanges();
     
-    // Extract CAN values from properties - try multiple field names
+    // Extract CAN values from properties - try multiple field names and locations
     const propertiesToFetch = paginated.items
       .map(change => {
+        // Check both change object and change.property for CAN
         const prop = change.property || change;
-        // Try multiple ways to get CAN - same logic as used in table rendering
-        let can = prop.CAN || prop.can || prop['CAN'] || 
+        const changeObj = change;
+        
+        // Try multiple ways to get CAN - check change object first, then property
+        let can = changeObj.CAN || changeObj.can || changeObj['CAN'] || changeObj.identifier ||
+                  prop.CAN || prop.can || prop['CAN'] || 
                   prop.propertyId || prop['Property ID'] || 
                   prop['Account Number'] || prop.accountNumber ||
                   prop.id || prop.identifier;
@@ -95,33 +99,38 @@ export default function PropertyList() {
         // Convert to string and clean
         if (can) {
           can = String(can).replace(/[\s-]/g, '').trim();
-          // Pad with leading zeros if it's a number and less than 12 digits
-          if (/^\d+$/.test(can) && can.length < 12) {
-            can = can.padStart(12, '0');
-          }
+          // Don't pad - CAN should already be 12 digits if it's valid
         }
         
-        return { can, prop, originalCan: prop.CAN || prop.can || prop['CAN'] };
+        return { can, prop, change, originalCan: prop.CAN || changeObj.CAN };
       })
       .filter(({ can }) => {
-        // Check if CAN is valid (12 digits)
+        // Check if CAN is valid (exactly 12 digits, no padding)
         if (!can) return false;
         const cleaned = String(can).replace(/[\s-]/g, '').trim();
+        // Must be exactly 12 digits
         return /^\d{12}$/.test(cleaned);
       });
 
     console.log('Properties to fetch CAD for:', propertiesToFetch.length);
-    console.log('Sample CANs:', propertiesToFetch.slice(0, 3).map(p => ({ can: p.can, original: p.originalCan })));
+    console.log('Total items in view:', paginated.items.length);
+    if (propertiesToFetch.length > 0) {
+      console.log('Sample CANs:', propertiesToFetch.slice(0, 3).map(p => ({ can: p.can, original: p.originalCan })));
+    } else {
+      // Debug: log what we found
+      const sampleItems = paginated.items.slice(0, 3);
+      console.log('No valid CANs found. Sample items:', sampleItems.map(c => ({
+        hasProperty: !!c.property,
+        changeCAN: c.CAN,
+        changeIdentifier: c.identifier,
+        propertyCAN: c.property?.CAN,
+        propertyKeys: c.property ? Object.keys(c.property).slice(0, 10) : [],
+        propertyId: c.property?.propertyId || c.property?.id
+      })));
+    }
 
     if (propertiesToFetch.length === 0) {
-      // Debug: log what we found
-      console.log('No valid CANs found. Sample properties:', paginated.items.slice(0, 3).map(c => ({
-        property: c.property,
-        hasCAN: !!c.property?.CAN,
-        canValue: c.property?.CAN,
-        allKeys: Object.keys(c.property || {})
-      })));
-      alert(`No properties with valid CAN values found in current view.\n\nFound ${paginated.items.length} properties, but none have valid 12-digit CAN values.\n\nCheck console for details.`);
+      alert(`No properties with valid CAN values found in current view.\n\nFound ${paginated.items.length} properties, but none have valid 12-digit CAN values.\n\nCheck browser console (F12) for details.`);
       return;
     }
 
