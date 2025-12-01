@@ -1141,7 +1141,7 @@ export default function PropertyDashboard() {
                                 }`}
                                 title={totalCount > statusChangesPerPage ? `Showing ${showingCount} of ${totalCount} on this page` : undefined}
                               >
-                                All Transitions ({totalCount > statusChangesPerPage ? `${statusChangesPerPage} of ${totalCount}` : totalCount})
+                                All Transitions ({totalCount > statusChangesPerPage ? `250 of ${totalCount}` : totalCount})
                               </button>
                               {[
                                 { key: 'blank-to-p', label: 'Blank → P', count: allChanges.filter(c => c.oldStatus === 'Blank' && c.newStatus === 'P').length },
@@ -1162,7 +1162,7 @@ export default function PropertyDashboard() {
                                     }`}
                                     title={showPagination ? `Showing ${statusChangesPerPage} of ${transition.count} on this page` : undefined}
                                   >
-                                    {transition.label} ({showPagination ? `${statusChangesPerPage} of ${transition.count}` : transition.count})
+                                    {transition.label} ({showPagination ? `250 of ${transition.count}` : transition.count})
                                   </button>
                                 );
                               })}
@@ -1198,7 +1198,7 @@ export default function PropertyDashboard() {
                                 }`}
                                 title={totalCount > statusChangesPerPage ? `Showing ${statusChangesPerPage} of ${totalCount} on this page` : undefined}
                               >
-                                All Properties with New Status ({totalCount > statusChangesPerPage ? `${statusChangesPerPage} of ${totalCount}` : totalCount})
+                                All Properties with New Status ({totalCount > statusChangesPerPage ? `250 of ${totalCount}` : totalCount})
                               </button>
                               {(['J', 'A', 'P'] as const).map((status) => {
                                 const allStatusChanges = allChanges.filter(c => c.newStatus === status);
@@ -1230,7 +1230,7 @@ export default function PropertyDashboard() {
                                     }`}
                                     title={showPagination ? `Showing ${statusChangesPerPage} of ${count} on this page` : undefined}
                                   >
-                                    {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({showPagination ? `${statusChangesPerPage} of ${count}` : count})
+                                    {status === 'J' ? 'Judgment' : status === 'A' ? 'Active' : 'Pending'} ({showPagination ? `250 of ${count}` : count})
                                   </button>
                                 );
                               })}

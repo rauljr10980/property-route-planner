@@ -10,6 +10,7 @@
     "analyze-columns": "node --experimental-modules src/scripts/analyzeColumnDefinitions.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.0",
     "@react-google-maps/api": "^2.19.3",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
