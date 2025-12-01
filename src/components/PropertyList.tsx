@@ -82,34 +82,44 @@ export default function PropertyList() {
   const fetchCADForAllVisible = async () => {
     const paginated = getPaginatedStatusChanges();
     
-    // Extract CAN values - check both comparison report structure and property structure
+    // Extract CAN values - need to get full property from properties array to get 12-digit CAN
     const propertiesToFetch = paginated.items
       .map(change => {
-        // The change object might be from comparisonReport.statusChanges (has CAN directly)
-        // or from getStatusChanges() (has property.CAN)
         const changeObj = change;
-        const prop = change.property || change;
+        let prop = change.property || change;
         
-        // Priority: change.CAN (from comparison report) > prop.CAN > other fields
-        let can = changeObj.CAN || changeObj.can || changeObj['CAN'] || changeObj.identifier ||
-                  prop.CAN || prop.can || prop['CAN'] || 
-                  prop.propertyId || prop['Property ID'] || 
-                  prop['Account Number'] || prop.accountNumber ||
-                  prop.id || prop.identifier;
+        // If property is minimal (from comparison report), try to find full property from properties array
+        if (!prop.CAN || String(prop.CAN).replace(/[\s-]/g, '').trim().length !== 12) {
+          // Try to find the full property using identifier
+          const identifier = changeObj.CAN || changeObj.identifier || changeObj.property?.CAN || 
+                            prop.CAN || prop.id || prop.identifier;
+          if (identifier) {
+            const fullProp = properties.find(p => {
+              const pCan = p.CAN || p['CAN'];
+              const pId = p.id || p.propertyId || p['Property ID'];
+              return (pCan && String(pCan).trim() === String(identifier).trim()) ||
+                     (pId && String(pId).trim() === String(identifier).trim());
+            });
+            if (fullProp) {
+              prop = fullProp;
+            }
+          }
+        }
+        
+        // Get CAN - must be 12 digits
+        let can = prop.CAN || prop['CAN'] || 
+                  prop['Account Number'] || prop.accountNumber;
         
         // Convert to string and clean
         if (can) {
           can = String(can).replace(/[\s-]/g, '').trim();
-          // Must be exactly 12 digits - don't pad, just validate
         }
         
         return { 
           can, 
           prop, 
-          change, 
-          originalCan: changeObj.CAN || prop.CAN,
-          hasChangeCAN: !!changeObj.CAN,
-          hasPropCAN: !!prop.CAN
+          change,
+          identifier: changeObj.CAN || changeObj.identifier || prop.CAN || prop.id
         };
       })
       .filter(({ can }) => {
