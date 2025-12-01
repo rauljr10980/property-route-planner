@@ -787,14 +787,44 @@ async function fetchCADForCANOnce(can) {
 
     // Parse the results page
     const $results = cheerio.load(searchResponse.data);
+    const bodyText = $results('body').text();
     
+    // Extract comprehensive property information
+    const propertyInfo = {
+      cad: null,
+      address: null,
+      propertySiteAddress: null,
+      legalDescription: null,
+      ownerName: null,
+      taxInfo: {
+        currentYearAmountDue: null,
+        delinquentAfter: null,
+        halfPaymentOption: null,
+        halfPaymentDeadline: null,
+        priorYearsAmountDue: null,
+        totalAmountDue: null,
+        lastPaymentAmount: null,
+        lastPayer: null,
+        lastPaymentDate: null
+      },
+      propertyValues: {
+        totalMarketValue: null,
+        landValue: null,
+        improvementValue: null,
+        cappedValue: null,
+        agriculturalValue: null
+      },
+      exemptions: [],
+      jurisdictions: [],
+      paymentHistory: []
+    };
+
     // Extract CAD Property ID (PID) - look for 6-digit number
     let cadPID = null;
 
     // Method 1: Look for explicit CAD Property ID labels
     $results('*').each((i, elem) => {
       const text = $results(elem).text();
-      // Look for "CAD Property ID", "PID", "Property ID" followed by 6 digits
       const cadMatch = text.match(/(?:CAD\s*Property\s*ID|PID|Property\s*ID|CAD\s*ID)[\s:]*(\d{6})/i);
       if (cadMatch && !cadPID) {
         cadPID = cadMatch[1];
@@ -819,7 +849,6 @@ async function fetchCADForCANOnce(can) {
 
     // Method 3: Look for 6-digit numbers near property-related text
     if (!cadPID) {
-      const bodyText = $results('body').text();
       const lines = bodyText.split('\n');
       for (const line of lines) {
         const lowerLine = line.toLowerCase();
@@ -833,10 +862,145 @@ async function fetchCADForCANOnce(can) {
       }
     }
 
+    propertyInfo.cad = cadPID;
+
+    // Extract Address
+    const addressMatch = bodyText.match(/Address:\s*([^\n]+(?:\n[^\n]+)*?)(?:\n|Property Site Address|Legal Description)/i);
+    if (addressMatch) {
+      propertyInfo.address = addressMatch[1].trim().replace(/\s+/g, ' ');
+    }
+
+    // Extract Property Site Address
+    const siteAddressMatch = bodyText.match(/Property Site Address:\s*([^\n]+)/i);
+    if (siteAddressMatch) {
+      propertyInfo.propertySiteAddress = siteAddressMatch[1].trim();
+    }
+
+    // Extract Legal Description
+    const legalDescMatch = bodyText.match(/Legal Description:\s*([^\n]+)/i);
+    if (legalDescMatch) {
+      propertyInfo.legalDescription = legalDescMatch[1].trim();
+    }
+
+    // Extract Owner Name (from Address section)
+    if (propertyInfo.address) {
+      const ownerMatch = propertyInfo.address.match(/^([A-Z\s]+?)\s+\d+/);
+      if (ownerMatch) {
+        propertyInfo.ownerName = ownerMatch[1].trim();
+      }
+    }
+
+    // Extract Tax Information
+    const currentYearMatch = bodyText.match(/(\d{4})\s+Year\s+Amount\s+Due:\s*\$?([\d,]+\.?\d*)/i);
+    if (currentYearMatch) {
+      propertyInfo.taxInfo.currentYearAmountDue = parseFloat(currentYearMatch[2].replace(/,/g, ''));
+    }
+
+    const delinquentMatch = bodyText.match(/Delinquent\s+After:\s*(\d{2}\/\d{2}\/\d{4})/i);
+    if (delinquentMatch) {
+      propertyInfo.taxInfo.delinquentAfter = delinquentMatch[1];
+    }
+
+    const halfPaymentMatch = bodyText.match(/Half\s+Payment\s+Option\s+Amount[^:]*:\s*\$?([\d,]+\.?\d*)/i);
+    if (halfPaymentMatch) {
+      propertyInfo.taxInfo.halfPaymentOption = parseFloat(halfPaymentMatch[1].replace(/,/g, ''));
+    }
+
+    const halfPaymentDeadlineMatch = bodyText.match(/Deadline\s+(\w+\s+\d{1,2},\s+\d{4})/i);
+    if (halfPaymentDeadlineMatch) {
+      propertyInfo.taxInfo.halfPaymentDeadline = halfPaymentDeadlineMatch[1];
+    }
+
+    const priorYearsMatch = bodyText.match(/Prior\s+Year\(s\)\s+Amount\s+Due:\s*\$?([\d,]+\.?\d*)/i);
+    if (priorYearsMatch) {
+      propertyInfo.taxInfo.priorYearsAmountDue = parseFloat(priorYearsMatch[1].replace(/,/g, ''));
+    }
+
+    const totalDueMatch = bodyText.match(/Total\s+Amount\s+Due:\s*\$?([\d,]+\.?\d*)/i);
+    if (totalDueMatch) {
+      propertyInfo.taxInfo.totalAmountDue = parseFloat(totalDueMatch[1].replace(/,/g, ''));
+    }
+
+    const lastPaymentMatch = bodyText.match(/Last\s+Payment\s+Amount\s+Received:\s*\$?([\d,]+\.?\d*)/i);
+    if (lastPaymentMatch) {
+      propertyInfo.taxInfo.lastPaymentAmount = parseFloat(lastPaymentMatch[1].replace(/,/g, ''));
+    }
+
+    const lastPayerMatch = bodyText.match(/Last\s+Payer:\s*([^\n]+)/i);
+    if (lastPayerMatch) {
+      propertyInfo.taxInfo.lastPayer = lastPayerMatch[1].trim();
+    }
+
+    const lastPaymentDateMatch = bodyText.match(/Last\s+Payment\s+Date:\s*(\d{2}\/\d{2}\/\d{4})/i);
+    if (lastPaymentDateMatch) {
+      propertyInfo.taxInfo.lastPaymentDate = lastPaymentDateMatch[1];
+    }
+
+    // Extract Property Values
+    const totalMarketMatch = bodyText.match(/Total\s+Market\s+Value:\s*\$?([\d,]+)/i);
+    if (totalMarketMatch) {
+      propertyInfo.propertyValues.totalMarketValue = parseFloat(totalMarketMatch[1].replace(/,/g, ''));
+    }
+
+    const landValueMatch = bodyText.match(/Land\s+Value:\s*\$?([\d,]+)/i);
+    if (landValueMatch) {
+      propertyInfo.propertyValues.landValue = parseFloat(landValueMatch[1].replace(/,/g, ''));
+    }
+
+    const improvementMatch = bodyText.match(/Improvement\s+Value:\s*\$?([\d,]+)/i);
+    if (improvementMatch) {
+      propertyInfo.propertyValues.improvementValue = parseFloat(improvementMatch[1].replace(/,/g, ''));
+    }
+
+    const cappedMatch = bodyText.match(/Capped\s+Value:\s*\$?([\d,]+)/i);
+    if (cappedMatch) {
+      propertyInfo.propertyValues.cappedValue = parseFloat(cappedMatch[1].replace(/,/g, ''));
+    }
+
+    const agValueMatch = bodyText.match(/Agricultural\s+Value:\s*\$?([\d,]+)/i);
+    if (agValueMatch) {
+      propertyInfo.propertyValues.agriculturalValue = parseFloat(agValueMatch[1].replace(/,/g, ''));
+    }
+
+    // Extract Exemptions
+    const exemptionsMatch = bodyText.match(/Exemptions[^:]*:\s*([^\n]+)/i);
+    if (exemptionsMatch) {
+      propertyInfo.exemptions = exemptionsMatch[1].split(',').map(e => e.trim()).filter(e => e && e !== 'None');
+    }
+
+    // Extract Jurisdictions
+    const jurisdictionsMatch = bodyText.match(/Jurisdictions[^:]*:\s*([^\n]+)/i);
+    if (jurisdictionsMatch) {
+      propertyInfo.jurisdictions = jurisdictionsMatch[1].split(',').map(j => j.trim()).filter(j => j && j !== 'None');
+    }
+
+    // Extract Payment History
+    // Look for payment history section - format: "YYYY-MM-DD YYYY $amount Payment PAYER_NAME"
+    const paymentHistorySection = bodyText.match(/Payment\s+History[^\n]*(?:\n[^\n]*)*/i);
+    if (paymentHistorySection) {
+      const paymentLines = paymentHistorySection[0].split('\n');
+      for (const line of paymentLines) {
+        // Match format: "2025-04-14 2024 $380.00 Payment CASAS CAROLINA G"
+        const paymentMatch = line.match(/(\d{4}-\d{2}-\d{2})\s+(\d{4}(?:,\s*\d{4})*)\s+\$?([\d,]+\.?\d*)\s+Payment\s+(.+)/i);
+        if (paymentMatch) {
+          const [, date, years, amount, payer] = paymentMatch;
+          propertyInfo.paymentHistory.push({
+            date: date,
+            years: years.split(',').map(y => y.trim()),
+            amount: parseFloat(amount.replace(/,/g, '')),
+            payer: payer.trim()
+          });
+        }
+      }
+    }
+
+    // Sort payment history by date (newest first)
+    propertyInfo.paymentHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
+
     if (cadPID) {
-      return { success: true, cad: cadPID };
+      return { success: true, cad: cadPID, propertyInfo };
     } else {
-      return { success: false, cad: null, error: 'CAD not found in search results' };
+      return { success: false, cad: null, error: 'CAD not found in search results', propertyInfo };
     }
   } catch (error) {
     return { success: false, cad: null, error: error.message };
@@ -1852,12 +2016,30 @@ async function processFileAsync(file, existingPropertiesJson, uploadDate, ip) {
               prop.cadPropertyId = result.cad;
               prop.cadFetchedDate = new Date().toISOString();
               prop.cadFetchAttempts = result.attempts || 1;
+              
+              // Store comprehensive property information from Bexar County
+              if (result.propertyInfo) {
+                prop.bexarCountyData = result.propertyInfo;
+                // Also store commonly used fields at top level for easy access
+                if (result.propertyInfo.address) prop.bexarAddress = result.propertyInfo.address;
+                if (result.propertyInfo.legalDescription) prop.legalDescription = result.propertyInfo.legalDescription;
+                if (result.propertyInfo.taxInfo) prop.taxInfo = result.propertyInfo.taxInfo;
+                if (result.propertyInfo.propertyValues) prop.propertyValues = result.propertyInfo.propertyValues;
+                if (result.propertyInfo.paymentHistory && result.propertyInfo.paymentHistory.length > 0) {
+                  prop.paymentHistory = result.propertyInfo.paymentHistory;
+                }
+              }
+              
               cadFetched++;
               return { success: true, can, cad: result.cad, attempts: result.attempts };
             } else {
               prop.cadFetchError = result.error;
               prop.cadFetchAttempts = result.attempts || 1;
               prop.cadFetchedDate = new Date().toISOString();
+              // Still store property info even if CAD wasn't found
+              if (result.propertyInfo) {
+                prop.bexarCountyData = result.propertyInfo;
+              }
               cadFailed++;
               return { success: false, can, error: result.error, attempts: result.attempts };
             }
