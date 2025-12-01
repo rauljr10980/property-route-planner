@@ -1335,15 +1335,18 @@ export default function PropertyDashboard() {
                       {(() => {
                         const paginated = getPaginatedStatusChanges();
                         // Always show pagination if there are more than 250 items
-                        console.log(`🔍 Pagination check: total=${paginated.total}, perPage=${statusChangesPerPage}, totalPages=${paginated.totalPages}`);
+                        console.log(`🔍 Pagination check: total=${paginated.total}, perPage=${statusChangesPerPage}, totalPages=${paginated.totalPages}, currentPage=${paginated.currentPage}`);
+                        
+                        // Show pagination if there are more items than can fit on one page
                         if (paginated.total <= statusChangesPerPage) {
                           console.log(`❌ Not showing pagination: total (${paginated.total}) <= perPage (${statusChangesPerPage})`);
                           return null;
                         }
-                        console.log(`✅ Showing pagination controls`);
+                        
+                        console.log(`✅ Showing pagination controls for ${paginated.total} items across ${paginated.totalPages} pages`);
                         
                         return (
-                          <div className="mt-4 flex items-center justify-between border-t border-gray-200 pt-4">
+                          <div className="mt-4 flex items-center justify-between border-t-2 border-gray-300 pt-4 bg-gray-50 p-4 rounded-lg">
                             <div className="flex items-center gap-2 text-sm text-gray-700">
                               <span>
                                 Showing <strong>{(paginated.currentPage - 1) * statusChangesPerPage + 1}</strong> to{' '}
