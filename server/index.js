@@ -975,23 +975,84 @@ async function fetchCADForCANOnce(can) {
     }
 
     // Extract Payment History
-    // Look for payment history section - format: "YYYY-MM-DD YYYY $amount Payment PAYER_NAME"
-    const paymentHistorySection = bodyText.match(/Payment\s+History[^\n]*(?:\n[^\n]*)*/i);
-    if (paymentHistorySection) {
-      const paymentLines = paymentHistorySection[0].split('\n');
-      for (const line of paymentLines) {
-        // Match format: "2025-04-14 2024 $380.00 Payment CASAS CAROLINA G"
-        const paymentMatch = line.match(/(\d{4}-\d{2}-\d{2})\s+(\d{4}(?:,\s*\d{4})*)\s+\$?([\d,]+\.?\d*)\s+Payment\s+(.+)/i);
+    // Look for payment history section - format can vary, try multiple patterns
+    // Pattern 1: "2025-04-14 2024 $380.00 Payment CASAS CAROLINA G"
+    // Pattern 2: "2024-10-28 2023 $300.00 Payment CASAS CAROLINA G"
+    // Pattern 3: Table format with dates, years, amounts, and payers
+    
+    // Try to find payment history section
+    const paymentHistoryMatch = bodyText.match(/Payment\s+History[^\n]*(?:\n[^\n]*){0,50}/i);
+    if (paymentHistoryMatch) {
+      const paymentSection = paymentHistoryMatch[0];
+      const lines = paymentSection.split('\n');
+      
+      for (const line of lines) {
+        // Try multiple date formats
+        // Format 1: "YYYY-MM-DD YYYY $amount Payment PAYER"
+        let paymentMatch = line.match(/(\d{4}-\d{2}-\d{2})\s+(\d{4}(?:,\s*\d{4})*)\s+\$?([\d,]+\.?\d*)\s+Payment\s+(.+)/i);
+        
+        // Format 2: "MM/DD/YYYY YYYY $amount Payment PAYER" (if dates are formatted differently)
+        if (!paymentMatch) {
+          paymentMatch = line.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{4}(?:,\s*\d{4})*)\s+\$?([\d,]+\.?\d*)\s+Payment\s+(.+)/i);
+        }
+        
+        // Format 3: Just look for date-like patterns followed by year and amount
+        if (!paymentMatch) {
+          paymentMatch = line.match(/(\d{4}[-/]\d{2}[-/]\d{2}|\d{2}\/\d{2}\/\d{4})\s+(\d{4}(?:,\s*\d{4})*)\s+\$?([\d,]+\.?\d*)\s+Payment\s+(.+)/i);
+        }
+        
         if (paymentMatch) {
-          const [, date, years, amount, payer] = paymentMatch;
+          let [, dateStr, years, amount, payer] = paymentMatch;
+          
+          // Normalize date format to YYYY-MM-DD
+          let normalizedDate = dateStr;
+          if (dateStr.includes('/')) {
+            // Convert MM/DD/YYYY to YYYY-MM-DD
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+              normalizedDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+            }
+          }
+          
           propertyInfo.paymentHistory.push({
-            date: date,
-            years: years.split(',').map(y => y.trim()),
+            date: normalizedDate,
+            years: years.split(',').map((y: string) => y.trim()),
             amount: parseFloat(amount.replace(/,/g, '')),
             payer: payer.trim()
           });
         }
       }
+    }
+    
+    // Also try to extract from table structures if available
+    if (propertyInfo.paymentHistory.length === 0) {
+      $results('table tr').each((i, row) => {
+        const cells = $results(row).find('td');
+        if (cells.length >= 4) {
+          const dateText = $results(cells[0]).text().trim();
+          const yearText = $results(cells[1]).text().trim();
+          const amountText = $results(cells[2]).text().trim();
+          const payerText = $results(cells[3]).text().trim();
+          
+          // Check if this looks like a payment row
+          if (dateText.match(/\d{4}[-/]\d{2}[-/]\d{2}/) && amountText.match(/\$?[\d,]+\.?\d*/)) {
+            let normalizedDate = dateText;
+            if (dateText.includes('/')) {
+              const parts = dateText.split('/');
+              if (parts.length === 3) {
+                normalizedDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+              }
+            }
+            
+            propertyInfo.paymentHistory.push({
+              date: normalizedDate,
+              years: yearText.split(',').map((y: string) => y.trim()),
+              amount: parseFloat(amountText.replace(/[$,]/g, '')),
+              payer: payerText.trim()
+            });
+          }
+        }
+      });
     }
 
     // Sort payment history by date (newest first)
