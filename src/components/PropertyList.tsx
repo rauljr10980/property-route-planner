@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, Navigation, RefreshCw, Search } from 'lucide-react';
+import { CheckCircle, Navigation } from 'lucide-react';
 import { loadSharedProperties } from '../utils/sharedData';
 import { getPropertyStatus as getPropertyStatusUtil } from '../utils/fileProcessor';
 import gcsStorage from '../services/gcsStorage';
@@ -28,58 +28,12 @@ export default function PropertyList() {
     statusChanges: []
   });
   const [deadLeads, setDeadLeads] = useState<any[]>([]);
-  const [fetchingCAD, setFetchingCAD] = useState<Set<string>>(new Set());
-  const [cadData, setCadData] = useState<Map<string, { cad: string | null; propertyInfo?: any }>>(new Map());
-  const [fetchingAllCAD, setFetchingAllCAD] = useState(false);
-
   const getPropertyStatus = (prop: Property): string | null => {
     return getPropertyStatusUtil(prop);
   };
 
-  const fetchCADForProperty = async (can: string, prop: any) => {
-    if (!can || fetchingCAD.has(can)) return;
-    
-    setFetchingCAD(prev => new Set(prev).add(can));
-    
-    try {
-      const result = await gcsStorage.fetchCAD(can);
-      setCadData(prev => {
-        const newMap = new Map(prev);
-        newMap.set(can, {
-          cad: result.cad,
-          propertyInfo: result.propertyInfo
-        });
-        return newMap;
-      });
-      
-      // Update the property in the list with CAD data
-      if (result.success && result.cad) {
-        prop.CAD = result.cad;
-        prop.cadPropertyId = result.cad;
-        if (result.propertyInfo) {
-          prop.cadPropertyInfo = result.propertyInfo;
-        }
-      }
-    } catch (error: any) {
-      console.error(`Error fetching CAD for CAN ${can}:`, error);
-      setCadData(prev => {
-        const newMap = new Map(prev);
-        newMap.set(can, {
-          cad: null,
-          propertyInfo: { error: error.message }
-        });
-        return newMap;
-      });
-    } finally {
-      setFetchingCAD(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(can);
-        return newSet;
-      });
-    }
-  };
-
-  const fetchCADForAllVisible = async () => {
+  // Note: CAD is automatically fetched on the backend during file processing
+  // No need for browser-based fetching - just display the CAD value if it exists
     const paginated = getPaginatedStatusChanges();
     
     // Extract CAN values - search through all properties to find matches
