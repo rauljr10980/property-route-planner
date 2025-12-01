@@ -62,23 +62,25 @@ const RATE_LIMIT_MAX_REQUESTS = 100; // 100 requests per minute per IP
 const dailyQuotaMap = new Map();
 const DAILY_QUOTA_WINDOW = 24 * 60 * 60 * 1000; // 24 hours
 
-// Cost-aware limits (conservative to stay within $10/month budget)
+// Cost-aware limits (adjusted for processing 58,000+ properties with CAD fetching)
 const COST_LIMITS = {
   // File processing is expensive (CPU, memory, GCS operations)
-  PROCESS_FILE_PER_DAY: 10,        // Max 10 file uploads per day per IP
-  PROCESS_FILE_PER_HOUR: 20,       // Max 20 file uploads per hour per IP (increased for testing)
-  PROCESS_FILE_SIZE_MB: 20,         // Max 20MB per file (reduced from 50MB)
+  // Increased limits for large-scale processing
+  PROCESS_FILE_PER_DAY: 50,        // Max 50 file uploads per day per IP (increased from 10)
+  PROCESS_FILE_PER_HOUR: 50,       // Max 50 file uploads per hour per IP (increased from 20)
+  PROCESS_FILE_SIZE_MB: 50,         // Max 50MB per file (increased from 20MB)
   
   // Status-related API calls
-  STATUS_REQUESTS_PER_DAY: 500,    // Max 500 status requests per day per IP
-  STATUS_REQUESTS_PER_HOUR: 100,   // Max 100 status requests per hour per IP
+  STATUS_REQUESTS_PER_DAY: 2000,    // Max 2000 status requests per day per IP (increased from 500)
+  STATUS_REQUESTS_PER_HOUR: 500,   // Max 500 status requests per hour per IP (increased from 100)
   
   // General API calls
-  GENERAL_REQUESTS_PER_DAY: 1000,  // Max 1000 general requests per day per IP
-  GENERAL_REQUESTS_PER_HOUR: 200,  // Max 200 general requests per hour per IP
+  GENERAL_REQUESTS_PER_DAY: 5000,  // Max 5000 general requests per day per IP (increased from 1000)
+  GENERAL_REQUESTS_PER_HOUR: 1000,  // Max 1000 general requests per hour per IP (increased from 200)
   
   // GCS operations (read/write costs money)
-  GCS_OPERATIONS_PER_DAY: 200,     // Max 200 GCS operations per day per IP
+  // Increased for incremental saving during CAD fetching
+  GCS_OPERATIONS_PER_DAY: 1000,     // Max 1000 GCS operations per day per IP (increased from 200)
 };
 
 // Check if request involves J, A, or P status
@@ -1399,7 +1401,7 @@ app.post('/api/process-file', upload.single('file'), async (req, res) => {
         try { unlinkSync(file.path); } catch (e) {}
       }
       return res.status(429).json({ 
-        error: 'Hourly file processing quota exceeded. Maximum 3 file uploads per hour. Please wait before uploading another file.',
+        error: `Hourly file processing quota exceeded. Maximum ${COST_LIMITS.PROCESS_FILE_PER_HOUR} file uploads per hour. Please wait before uploading another file.`,
         quotaType: 'hourly',
         limit: COST_LIMITS.PROCESS_FILE_PER_HOUR,
         retryAfter: 3600
