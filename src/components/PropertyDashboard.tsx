@@ -131,69 +131,27 @@ export default function PropertyDashboard() {
     }
   };
 
+  // DISABLED: Geocoding on frontend is too expensive ($299.99/month for 58,000+ properties)
+  // This function is kept for reference but should NOT be called
+  // Coordinates should be stored in property data from backend/GCS
   const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number } | null> => {
-    if (!window.google || !window.google.maps) {
-      try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
-          {
-            headers: {
-              'User-Agent': 'PropertyDashboard/1.0'
-            }
-          }
-        );
-        const geoData = await response.json();
-        if (geoData && geoData[0]) {
-          return {
-            lat: parseFloat(geoData[0].lat),
-            lng: parseFloat(geoData[0].lon)
-          };
-        }
-      } catch (e) {
-        console.error('Geocoding error:', e);
-      }
-      return null;
-    }
-
-    return new Promise((resolve) => {
-      const geocoder = new window.google.maps.Geocoder();
-      geocoder.geocode({ address }, (results, status) => {
-        if (status === 'OK' && results && results[0]) {
-          const location = results[0].geometry.location;
-          resolve({
-            lat: location.lat(),
-            lng: location.lng()
-          });
-        } else {
-          resolve(null);
-        }
-      });
-    });
+    console.warn('⚠️ Geocoding disabled to prevent high API costs. Use coordinates stored in property data instead.');
+    return null;
   };
 
   const geocodeProperties = async () => {
-    const propsWithCoords: Property[] = [];
+    // CRITICAL: DO NOT geocode on frontend - this costs $299.99/month for 58,000+ properties!
+    // Only use properties that already have coordinates stored in GCS
+    const propsWithCoords: Property[] = properties.filter(prop => prop.lat && prop.lng);
     
-    for (const prop of properties) {
-      if (prop.lat && prop.lng) {
-        propsWithCoords.push(prop);
-        continue;
-      }
-      
-      const address = prop.address || prop.Address || prop.ADDRSTRING;
-      if (address) {
-        const coords = await geocodeAddress(address);
-        if (coords) {
-          propsWithCoords.push({ ...prop, lat: coords.lat, lng: coords.lng });
-        } else {
-          propsWithCoords.push(prop);
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
-      } else {
-        propsWithCoords.push(prop);
-      }
+    if (propsWithCoords.length === 0) {
+      console.warn('⚠️ No properties have coordinates. Geocoding disabled to prevent high API costs.');
+      console.warn('💡 Tip: Store coordinates in your property data to avoid expensive geocoding API calls.');
+      setGeocodedProperties(properties);
+      return;
     }
     
+    console.log(`✅ Using ${propsWithCoords.length} properties with existing coordinates (out of ${properties.length} total)`);
     setGeocodedProperties(propsWithCoords);
   };
 
